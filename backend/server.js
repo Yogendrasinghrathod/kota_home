@@ -1,7 +1,22 @@
+import 'dotenv/config';
 import express from 'express';
+import { connectDB } from './src/config/db.js';
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
 
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
-});
+async function startServer() {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
