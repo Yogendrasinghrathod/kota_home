@@ -1,122 +1,132 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
+import { sendOTP, verifyOTP } from "./config/services/authService";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState("");
+
+  const handleSendOTP = async () => {
+    try {
+      setError("");
+
+      // Firebase expects country code
+      const phoneNumber = `+91${phone}`;
+
+      await sendOTP(phoneNumber);
+
+      setOtpSent(true);
+      alert("OTP sent!");
+    } catch (error) {
+      console.error(error);
+      setError(error.message);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    try {
+      setError("");
+  
+      // 1. Verify OTP with Firebase
+      const loggedInUser = await verifyOTP(otp);
+  
+      // 2. Get Firebase ID token
+      const idToken = await loggedInUser.getIdToken();
+  
+      // 3. Send token to our backend
+      const response = await fetch(
+        "http://localhost:3000/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
+      );
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.message || "Backend login failed");
+      }
+  
+      console.log("Backend response:", data);
+  
+      // Firebase user
+      setUser(loggedInUser);
+  
+    } catch (error) {
+      console.error(error);
+      setError(error.message);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
+    <div style={{ padding: "40px", maxWidth: "400px", margin: "auto" }}>
+      <h1>Kota Home</h1>
+
+      {!user ? (
+        <>
+          <h2>Phone Login</h2>
+
+          <input
+            type="text"
+            placeholder="10 digit phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            maxLength={10}
+          />
+
+          <button onClick={handleSendOTP}>
+            Send OTP
+          </button>
+
+          {otpSent && (
+            <>
+              <br />
+              <br />
+
+              <input
+                type="text"
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+              />
+
+              <button onClick={handleVerifyOTP}>
+                Verify OTP
+              </button>
+            </>
+          )}
+
+          <div id="recaptcha-container"></div>
+
+          {error && (
+            <p style={{ color: "red" }}>
+              {error}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <h2>Login Successful 🎉</h2>
+
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+            <strong>UID:</strong> {user.uid}
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <p>
+            <strong>Phone:</strong> {user.phoneNumber}
+          </p>
+        </>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;

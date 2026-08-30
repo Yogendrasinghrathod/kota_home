@@ -1,18 +1,27 @@
-                         ┌──────────────┐
+```
+                     ┌──────────────────────┐
 
-                         │     USER     │
+                     │         USER         │
 
-                         │──────────────│
+                     │──────────────────────│
 
-                         │ user_id PK   │
+                     │ user_id PK           │
 
-                         │ name         │
+                     │ firebase_uid UNIQUE  │
 
-                         │ phone        │
+                     │ phone UNIQUE         │
 
-                         │ role         │
+                     │ name                 │
 
-                         └──────┬───────┘
+                     │ role                 │
+
+                     │ is_phone_verified    │
+
+                     │ created_at           │
+
+                     │ updated_at           │
+
+                     └──────────┬───────────┘
 
                                 │
 
@@ -22,77 +31,95 @@
 
                                 ▼
 
-                         ┌──────────────┐
+                     ┌──────────────────────┐
 
-                         │   PROPERTY   │
+                     │       PROPERTY       │
 
-                         │──────────────│
+                     │──────────────────────│
 
-                         │ property_id  │
+                     │ property_id PK       │
 
-                         │ owner_id FK  │
+                     │ owner_id FK          │
 
-                         │ name         │
+                     │ name                 │
 
-                         │ type         │
+                     │ type                 │
 
-                         │ gender       │
+                     │ gender               │
 
-                         └──────┬───────┘
+                     │ description          │
+
+                     │ status               │
+
+                     └──────────┬───────────┘
 
                                 │
 
-                   ┌────────────┼─────────────┐
+                ┌───────────────┼────────────────┐
 
-                   │            │             │
+                │               │                │
 
-                   │            │             │
+                ▼               ▼                ▼
 
-                   ▼            ▼             ▼
+         ┌────────────┐  ┌────────────┐  ┌────────────┐
 
-             ┌──────────┐ ┌──────────┐ ┌────────────┐
+         │    ROOM    │  │  LOCATION  │  │   MEDIA    │
 
-             │   ROOM   │ │ LOCATION │ │   MEDIA    │
+         │────────────│  │────────────│  │────────────│
 
-             │──────────│ │──────────│ │────────────│
+         │ room_id PK │  │location_id │  │ media_id PK│
 
-             │ room_id  │ │location_id│ │ media_id   │
+         │ property_id│  │ property_id│  │ property_id│
 
-             │ property │ │ property  │ │ property   │
+         │ price      │  │ address    │  │ room_id FK │
 
-             │ price    │ │ lat       │ │ room_id    │
+         │ sharing    │  │ area       │  │ type       │
 
-             │ sharing  │ │ lng       │ │ url        │
+         │ availability│ │ latitude   │  │ url        │
 
-             └────┬─────┘ └──────────┘ └────────────┘
+         └──────┬─────┘  │ longitude  │  │ is_primary │
 
-                  │
+                │         └────────────┘  └────────────┘
 
-                  │
+                │
 
-                  ▼
+                │ has
 
-             ┌──────────────┐
+                ▼
 
-             │ ROOM_AMENITY │
+         ┌────────────────┐
 
-             └──────┬───────┘
+         │ ROOM_AMENITY   │
 
-                    │
+         │────────────────│
 
-                    ▼
+         │ room_id FK     │
 
-             ┌──────────────┐
+         │ amenity_id FK  │
 
-             │   AMENITY    │
+         └───────┬────────┘
 
-             └──────────────┘
+                 │
 
-      ┌──────────────┐
+                 ▼
 
-      │     USER     │
+         ┌────────────────┐
 
-      └──────┬───────┘
+         │    AMENITY      │
+
+         │────────────────│
+
+         │ amenity_id PK   │
+
+         │ name            │
+
+         └────────────────┘
+
+  ┌──────────────────────┐
+
+  │         USER         │
+
+  └──────────┬───────────┘
 
              │
 
@@ -100,50 +127,92 @@
 
              ▼
 
-      ┌──────────────┐
+  ┌──────────────────────┐
 
-      │    REVIEW    │
+  │        REVIEW        │
 
-      │──────────────│
+  │──────────────────────│
 
-      │ review_id PK │
+  │ review_id PK         │
 
-      │ user_id FK   │
+  │ user_id FK           │
 
-      │ property_id  │
+  │ property_id FK       │
 
-      │ rating       │
+  │ rating               │
 
-      │ comment      │
+  │ comment              │
 
-      └──────┬───────┘
+  │ created_at           │
 
-             │
+  └──────────┬───────────┘
 
              │
 
              ▼
 
-         PROPERTY
+          PROPERTY
+```
 
+Phone Auth  using firebase
 
+flowchart TD
 
+    A[Student opens Kota Home] --> B[Enter Phone Number]
 
+    B --> C[React Frontend]
 
+    C --> D[Firebase Phone Authentication]
 
+    D --> E[Firebase sends OTP]
 
-USER       1 ─────── N  PROPERTY
+    E --> F[Student enters OTP]
 
-PROPERTY   1 ─────── N  ROOM
+    F --> G{OTP Valid?}
 
-PROPERTY   1 ─────── 1  LOCATION
+    G -- No --> H[Show Authentication Error]
 
-PROPERTY   1 ─────── N  MEDIA
+    H --> F
 
-ROOM       1 ─────── N  MEDIA
+    G -- Yes --> I[Firebase creates/authenticates User]
 
-ROOM       N ─────── N  AMENITY
+    I --> J[Firebase User UID]
 
-USER       1 ─────── N  REVIEW
+    J --> K[React gets Firebase ID Token]
 
-PROPERTY   1 ─────── N  REVIEW
+    K --> L[POST /api/auth/login]
+
+    L --> M[Express Backend]
+
+    M --> N[Auth Middleware]
+
+    N --> O[Extract Bearer Token]
+
+    O --> P[Firebase Admin SDK]
+
+    P --> Q{ID Token Valid?}
+
+    Q -- No --> R[Return 401 Unauthorized]
+
+    Q -- Yes --> S[Decode Firebase User]
+
+    S --> T[req.user]
+
+    T --> U[Auth Controller]
+
+    U --> V{User exists in MongoDB?}
+
+    V -- Yes --> W[Find Existing User]
+
+    V -- No --> X[Create New User]
+
+    X --> Y[MongoDB User]
+
+    W --> Y
+
+    Y --> Z[Return User Data]
+
+    Z --> AA[React Frontend]
+
+    AA --> AB[User Logged In]
+
