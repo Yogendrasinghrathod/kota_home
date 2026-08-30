@@ -156,63 +156,7 @@
 
 Phone Auth  using firebase
 
-flowchart TD
+<img width="945" height="362" alt="image" src="https://github.com/user-attachments/assets/3ddd8fc5-bcb4-4d4d-8b87-1ec4880c32be" />
 
-    A[Student opens Kota Home] --> B[Enter Phone Number]
 
-    B --> C[React Frontend]
-
-    C --> D[Firebase Phone Authentication]
-
-    D --> E[Firebase sends OTP]
-
-    E --> F[Student enters OTP]
-
-    F --> G{OTP Valid?}
-
-    G -- No --> H[Show Authentication Error]
-
-    H --> F
-
-    G -- Yes --> I[Firebase creates/authenticates User]
-
-    I --> J[Firebase User UID]
-
-    J --> K[React gets Firebase ID Token]
-
-    K --> L[POST /api/auth/login]
-
-    L --> M[Express Backend]
-
-    M --> N[Auth Middleware]
-
-    N --> O[Extract Bearer Token]
-
-    O --> P[Firebase Admin SDK]
-
-    P --> Q{ID Token Valid?}
-
-    Q -- No --> R[Return 401 Unauthorized]
-
-    Q -- Yes --> S[Decode Firebase User]
-
-    S --> T[req.user]
-
-    T --> U[Auth Controller]
-
-    U --> V{User exists in MongoDB?}
-
-    V -- Yes --> W[Find Existing User]
-
-    V -- No --> X[Create New User]
-
-    X --> Y[MongoDB User]
-
-    W --> Y
-
-    Y --> Z[Return User Data]
-
-    Z --> AA[React Frontend]
-
-    AA --> AB[User Logged In]
 
