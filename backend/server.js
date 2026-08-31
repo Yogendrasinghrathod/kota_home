@@ -4,6 +4,7 @@ import cors from "cors";
 import { connectDB } from "./src/config/db.js";
 import { firebaseAuth } from "./src/config/firebaseAdmin.js";
 import authRoutes from "./src/routes/authRoutes.js";
+import propertyRoutes from "./src/routes/propertyRoutes.js";
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -14,6 +15,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use("/api/properties", propertyRoutes);
 app.use("/api/auth", authRoutes);
 
 async function startServer() {

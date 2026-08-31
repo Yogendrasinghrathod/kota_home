@@ -32,14 +32,13 @@ const Login = () => {
   const handleVerifyOTP = async () => {
     try {
       setError("");
-
-      // Firebase verifies the OTP
-      await verifyOTP(otp);
-
-      console.log("Firebase authentication successful");
-
-      // AuthContext will detect the Firebase login.
-      // Navigate to dashboard.
+  
+      const firebaseUser = await verifyOTP(otp);
+  
+      const idToken = await firebaseUser.getIdToken();
+  
+      console.log("ID TOKEN:", idToken);
+  
       navigate("/dashboard");
     } catch (error) {
       console.error(error);

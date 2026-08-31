@@ -1,4 +1,5 @@
 ```
+ER Diagram
                      ┌──────────────────────┐
 
                      │         USER         │
@@ -156,7 +157,7 @@
 
 
 
-Authentication
+Authentication Flow
 
 
 
