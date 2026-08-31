@@ -154,9 +154,109 @@
           PROPERTY
 ```
 
-Phone Auth  using firebase
-
-<img width="945" height="362" alt="image" src="https://github.com/user-attachments/assets/3ddd8fc5-bcb4-4d4d-8b87-1ec4880c32be" />
 
 
+Authentication
+
+
+
+```mermaid
+
+flowchart TD
+
+    A["👤 User"] --> B["Login.jsx<br/>Enter Phone Number"]
+
+    B --> C["sendOTP()"]
+
+    C --> D["Firebase Phone Authentication"]
+
+    D --> E["OTP Sent"]
+
+    E --> F["User Enters OTP"]
+
+    F --> G["verifyOTP()"]
+
+    G --> H{"OTP Valid?"}
+
+    H -- "No" --> I["Show Error"]
+
+    I --> F
+
+    H -- "Yes" --> J["Firebase User<br/>UID + Phone"]
+
+    J --> K["onAuthStateChanged()"]
+
+    K --> L["AuthContext"]
+
+    L --> M["getIdToken()"]
+
+    M --> N["POST /api/auth/login<br/>Authorization: Bearer ID_TOKEN"]
+
+    N --> O["Express Backend"]
+
+    O --> P["Auth Middleware"]
+
+    P --> Q["Firebase Admin SDK"]
+
+    Q --> R{"ID Token Valid?"}
+
+    R -- "No" --> S["401 Unauthorized"]
+
+    R -- "Yes" --> T["Firebase UID"]
+
+    T --> U["Auth Controller"]
+
+    U --> V["Find User by firebaseUid"]
+
+    V --> W{"User Exists?"}
+
+    W -- "No" --> X["Create MongoDB User"]
+
+    W -- "Yes" --> Y["Get Existing MongoDB User"]
+
+    X --> Z["MongoDB User"]
+
+    Y --> Z
+
+    Z --> AA["Return User to Frontend"]
+
+    AA --> AB["AuthContext.setUser()"]
+
+    AB --> AC["React Router"]
+
+    AC --> AD["ProtectedRoute"]
+
+    AD --> AE{"Authenticated?"}
+
+    AE -- "No" --> AF["Navigate to /login"]
+
+    AE -- "Yes" --> AG["Dashboard / Protected Page"]
+
+    %% Persistence
+
+    AG --> AH["🔄 Page Refresh"]
+
+    AH --> AI["AuthProvider Starts"]
+
+    AI --> K
+
+    %% Logout
+
+    AG --> AJ["🚪 User Clicks Logout"]
+
+    AJ --> AK["logoutUser()"]
+
+    AK --> AL["Firebase signOut()"]
+
+    AL --> AM["Firebase Session Removed"]
+
+    AM --> K
+
+    K --> AN["firebaseUser = null"]
+
+    AN --> AB
+
+    AB --> AF
+
+```
 
