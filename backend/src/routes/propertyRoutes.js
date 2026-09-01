@@ -1,10 +1,13 @@
 import express from "express";
 
-import { createProperty } from "../controllers/propertyController.js";
+import { createProperty ,getProperties,getPropertyById,} from "../controllers/propertyController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/", authenticateUser, createProperty);
+router.get("/", authenticateUser, getProperties);
+router.get("/:id", authenticateUser, getPropertyById);
+
 
 export default router;

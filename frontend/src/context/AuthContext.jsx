@@ -11,18 +11,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = subscribeToAuthState(async (firebaseUser) => {
       try {
+
         if (!firebaseUser) {
           setUser(null);
           setLoading(false);
           return;
         }
+        // console.log(import.meta.env);
 
         // Firebase user is authenticated
         const idToken = await firebaseUser.getIdToken();
 
         // Get corresponding Kota Home user from backend
         const response = await fetch(
-          "http://localhost:3000/api/auth/login",
+          `${import.meta.env.VITE_BACKEND_URL}/api/auth/login`,
           {
             method: "POST",
             headers: {

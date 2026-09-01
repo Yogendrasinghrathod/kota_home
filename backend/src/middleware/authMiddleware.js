@@ -15,7 +15,8 @@ export const authenticateUser = async (req, res, next) => {
     const decodedToken = await firebaseAuth.verifyIdToken(idToken);
 
     req.user = decodedToken;
-
+    // console.log(decodedToken);
+    
     next();
   } catch (error) {
     console.error("Authentication error:", error.message);

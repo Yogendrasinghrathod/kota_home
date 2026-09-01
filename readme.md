@@ -155,11 +155,7 @@ ER Diagram
           PROPERTY
 ```
 
-
-
 Authentication Flow
-
-
 
 ```mermaid
 
@@ -259,5 +255,61 @@ flowchart TD
 
     AB --> AF
 
+```
+
+
+
+Firebase Phone OTP
+
+```
+    ↓
+```
+
+Firebase ID Token
+
+```
+    ↓
+```
+
+authenticateUser
+
+```
+    ↓
+```
+
+req.user.uid
+
+```
+    ↓
+```
+
+MongoDB User
+
+```
+    ↓
+```
+
+┌───────────────────────────┐
+
+│ Authorization             │
+
+│                           │
+
+│ Property Owner?           │
+
+│ Room Owner?               │
+
+│ Room belongs to Property? │
+
+└─────────────┬─────────────┘
+
+```
+          ↓
+
+       Controller
+
+          ↓
+
+       MongoDB
 ```
 

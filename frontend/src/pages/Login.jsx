@@ -37,7 +37,7 @@ const Login = () => {
   
       const idToken = await firebaseUser.getIdToken();
   
-      console.log("ID TOKEN:", idToken);
+      // console.log("ID TOKEN:", idToken);
   
       navigate("/dashboard");
     } catch (error) {

@@ -8,7 +8,7 @@ export const createProperty = async (req, res) => {
     const user = await User.findOne({
       firebaseUid: req.user.uid,
     });
-
+    
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -22,6 +22,7 @@ export const createProperty = async (req, res) => {
       type,
       gender,
       description,
+
     });
 
     return res.status(201).json({
@@ -35,6 +36,52 @@ export const createProperty = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to create property",
+    });
+  }
+};
+
+export const getProperties = async (req, res) => {
+  try {
+    const properties = await Property.find();
+
+    return res.status(200).json({
+      success: true,
+      count: properties.length,
+      properties,
+    });
+  } catch (error) {
+    console.error("Get properties error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch properties",
+    });
+  }
+};
+
+export const getPropertyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const property = await Property.findById(id);
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      property,
+    });
+  } catch (error) {
+    console.error("Get property error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch property",
     });
   }
 };
