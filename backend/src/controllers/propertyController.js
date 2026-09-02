@@ -3,7 +3,7 @@ import User from "../models/User.js";
 
 export const createProperty = async (req, res) => {
   try {
-    const { name, type, gender, description } = req.body;
+    const { name, type, gender, description,status } = req.body;
 
     const user = await User.findOne({
       firebaseUid: req.user.uid,
@@ -22,6 +22,7 @@ export const createProperty = async (req, res) => {
       type,
       gender,
       description,
+      status
 
     });
 
@@ -61,9 +62,10 @@ export const getProperties = async (req, res) => {
 
 export const getPropertyById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { propertyId } = req.params;
 
-    const property = await Property.findById(id);
+    const property = await Property.findById(propertyId)
+    .populate("owner", "firebaseUid name");
 
     if (!property) {
       return res.status(404).json({

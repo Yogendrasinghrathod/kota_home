@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post("/", authenticateUser, createProperty);
 router.get("/", authenticateUser, getProperties);
-router.get("/:id", authenticateUser, getPropertyById);
+router.get("/:propertyId", authenticateUser, getPropertyById);
 
 
 export default router;

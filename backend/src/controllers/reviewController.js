@@ -65,36 +65,43 @@ export const createReview = async (req, res) => {
 };
 
 export const getPropertyReviews = async (req, res) => {
-    try {
-      const { propertyId } = req.params;
-  
-      // Check property exists
-      const property = await Property.findById(propertyId);
-  
-      if (!property) {
-        return res.status(404).json({
-          success: false,
-          message: "Property not found",
-        });
-      }
-  
-      const reviews = await Review.find({
-        property: propertyId,
-      })
-        .populate("user", "name")
-        .sort({ createdAt: -1 });
-  
-      return res.status(200).json({
-        success: true,
-        count: reviews.length,
-        reviews,
-      });
-    } catch (error) {
-      console.error("Get property reviews error:", error);
-  
-      return res.status(500).json({
+  try {
+    const { propertyId } = req.params;
+
+    // Check property exists
+    const property = await Property.findById(propertyId);
+
+    if (!property) {
+      return res.status(404).json({
         success: false,
-        message: "Failed to fetch property reviews",
+        message: "Property not found",
       });
     }
-  };
+
+    const reviews = await Review.find({
+      property: propertyId,
+    })
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+
+    const averageRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) /
+        reviews.length
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      count: reviews.length,
+      averageRating: Number(averageRating.toFixed(1)),
+      reviews,
+    });
+  } catch (error) {
+    console.error("Get property reviews error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch property reviews",
+    });
+  }
+};

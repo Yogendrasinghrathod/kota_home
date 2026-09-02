@@ -72,3 +72,33 @@ export const getRoomsByProperty = async (req, res) => {
       });
     }
   };
+
+  export const getRoomById = async (req, res) => {
+    try {
+      const { propertyId, roomId } = req.params;
+  
+      const room = await Room.findOne({
+        _id: roomId,
+        property: propertyId,
+      });
+  
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          message: "Room not found",
+        });
+      }
+  
+      return res.status(200).json({
+        success: true,
+        room,
+      });
+    } catch (error) {
+      console.error("Get room error:", error);
+  
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch room",
+      });
+    }
+  };

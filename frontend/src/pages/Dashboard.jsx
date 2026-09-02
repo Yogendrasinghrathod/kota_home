@@ -1,7 +1,7 @@
 import { useAuth } from "../context/AuthContext.jsx";
 import { logoutUser } from "../config/services/authService";
 import { auth } from "../config/firebase.js";
-
+import { Link } from "react-router-dom";
 const Dashboard = () => {
     const { user } = useAuth();
 
@@ -56,49 +56,49 @@ const Dashboard = () => {
     //         alert(error.message);
     //     }
     // };
-    const testCreateRoom = async () => {
-        try {
-            const firebaseUser = auth.currentUser;
+    // const testCreateRoom = async () => {
+    //     try {
+    //         const firebaseUser = auth.currentUser;
 
-            if (!firebaseUser) {
-                throw new Error("No Firebase user logged in");
-            }
+    //         if (!firebaseUser) {
+    //             throw new Error("No Firebase user logged in");
+    //         }
 
-            const idToken = await firebaseUser.getIdToken();
+    //         const idToken = await firebaseUser.getIdToken();
 
-            // Use the _id of the property you already created
-            const propertyId = "6a953c899f255f087382593c";
+    //         // Use the _id of the property you already created
+    //         const propertyId = "6a953c899f255f087382593c";
 
-            const response = await fetch(
-                `http://localhost:3000/api/properties/${propertyId}/rooms`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${idToken}`,
-                    },
-                    body: JSON.stringify({
-                        price: 10000,
-                        sharing: 2,
-                        availability: 5,
-                    }),
-                }
-            );
+    //         const response = await fetch(
+    //             `http://localhost:3000/api/properties/${propertyId}/rooms`,
+    //             {
+    //                 method: "POST",
+    //                 headers: {
+    //                     "Content-Type": "application/json",
+    //                     Authorization: `Bearer ${idToken}`,
+    //                 },
+    //                 body: JSON.stringify({
+    //                     price: 10000,
+    //                     sharing: 2,
+    //                     availability: 5,
+    //                 }),
+    //             }
+    //         );
 
-            const data = await response.json();
+    //         const data = await response.json();
 
-            console.log("Room API response:", data);
+    //         console.log("Room API response:", data);
 
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to create room");
-            }
+    //         if (!response.ok) {
+    //             throw new Error(data.message || "Failed to create room");
+    //         }
 
-            alert("Room created successfully!");
-        } catch (error) {
-            console.error("Room creation error:", error);
-            alert(error.message);
-        }
-    };
+    //         alert("Room created successfully!");
+    //     } catch (error) {
+    //         console.error("Room creation error:", error);
+    //         alert(error.message);
+    //     }
+    // };
     return (
         <div style={{ padding: "40px" }}>
             <h1>Dashboard 🔐</h1>
@@ -126,9 +126,12 @@ const Dashboard = () => {
                     {/* <button onClick={testCreateProperty}>
                         Test Create Property
                     </button> */}
-                    <button onClick={testCreateRoom}>
+                    {/* <button onClick={testCreateRoom}>
                         Test Create Room
-                    </button>
+                    </button> */}
+                    <Link to="/properties">
+                        <button>View Properties</button>
+                    </Link>
 
                     <br />
                     <br />
