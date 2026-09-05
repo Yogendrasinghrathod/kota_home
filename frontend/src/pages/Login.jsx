@@ -90,30 +90,10 @@ const Login = () => {
       return;
     }
 
-    const isLocal =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
+    const redirectUrl = `${window.location.origin}${window.location.pathname}`;
+    const authUrl = `https://www.phone.email/auth/log-in?client_id=${clientId}&redirect_url=${redirectUrl}`;
 
-    const redirectUrl = isLocal
-      ? `${window.location.origin}/login`
-      : "https://kotaroom.online/login";
-
-    const authUrl = `https://auth.phone.email/log-in?client_id=${encodeURIComponent(
-      clientId
-    )}&redirect_url=${encodeURIComponent(redirectUrl)}`;
-
-    const left = (window.screen.width - 500) / 2;
-    const top = (window.screen.height - 600) / 2;
-
-    const popup = window.open(
-      authUrl,
-      "peLoginWindow",
-      `toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0,resizable=0,width=500,height=560,top=${top},left=${left}`
-    );
-
-    if (!popup) {
-      setError("Allow popups for this site to sign in");
-    }
+    window.location.assign(authUrl);
   };
 
   return (
