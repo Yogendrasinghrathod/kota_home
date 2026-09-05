@@ -16,13 +16,21 @@ import ownerReviewRoutes from "./src/routes/ownerReviewRoutes.js";
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+const frontendOrigins = (process.env.FRONTEND_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: frontendOrigins,
   })
 );
 app.use(express.json());
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 app.use("/api/properties", propertyRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", roomRoutes);
