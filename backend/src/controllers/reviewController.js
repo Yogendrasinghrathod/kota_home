@@ -105,3 +105,52 @@ export const getPropertyReviews = async (req, res) => {
     });
   }
 };
+
+export const getOwnerReviews = async (req, res) => {
+  try {
+    const user = await User.findOne({
+      firebaseUid: req.user.uid,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const properties = await Property.find({
+      owner: user._id,
+    }).select("_id name");
+
+    const propertyIds = properties.map((property) => property._id);
+
+    const reviews = await Review.find({
+      property: { $in: propertyIds },
+    })
+      .populate("user", "name")
+      .populate("property", "name")
+      .sort({ createdAt: -1 });
+
+    const averageRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) /
+          reviews.length
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      count: reviews.length,
+      averageRating: Number(averageRating.toFixed(1)),
+      properties,
+      reviews,
+    });
+  } catch (error) {
+    console.error("Get owner reviews error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch reviews",
+    });
+  }
+};

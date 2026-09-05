@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { getPropertyById } from "../config/services/propertyService.js";
+import { getPropertyById, updatePropertyStatus, deleteProperty } from "../config/services/propertyService.js";
 import { getRoomsByProperty } from "../config/services/roomService.js";
 import { getMediaByProperty } from "../config/services/mediaService.js";
 import { getRoomAmenities } from "../config/services/roomAmenityService.js";
 import { getLocationByProperty } from "../config/services/locationService.js";
 import { getReviewsByProperty } from "../config/services/reviewService.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import RoomCard from "../components/RoomCard.jsx";
+import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
+import PropertyMap from "../components/PropertyMap.jsx";
+import PropertyMediaCarousel from "../components/PropertyMediaCarousel.jsx";
+
 const PropertyDetails = () => {
     const { user } = useAuth();
     const { id } = useParams();
+    const navigate = useNavigate();
 
     const [property, setProperty] = useState(null);
     const [rooms, setRooms] = useState([]);
@@ -27,6 +31,7 @@ const PropertyDetails = () => {
     const [reviewsLoading, setReviewsLoading] = useState(true);
 
     const [error, setError] = useState("");
+    const [deleting, setDeleting] = useState(false);
 
     // =========================
     // PROPERTY
@@ -180,18 +185,15 @@ const PropertyDetails = () => {
     // DERIVED DATA
     // =========================
 
-    const primaryMedia = useMemo(() => {
-        if (media.length === 0) return null;
-
-        return (
-            media.find((item) => item.isPrimary && item.type === "IMAGE") ||
-            media.find((item) => item.type === "IMAGE") ||
-            media[0]
-        );
-    }, [media]);
-
     const roomTypes = useMemo(() => {
         return new Set(rooms.map((room) => room.sharing)).size;
+    }, [rooms]);
+
+    const totalRooms = useMemo(() => {
+        return rooms.reduce(
+            (sum, room) => sum + Number(room.availability || 0),
+            0
+        );
     }, [rooms]);
 
     const averageRating = useMemo(() => {
@@ -220,9 +222,13 @@ const PropertyDetails = () => {
         return Array.from(uniqueAmenities.values()).slice(0, 5);
     }, [roomAmenities]);
 
+    const ownerId = property?.owner?._id || property?.owner;
     const isOwner =
         !!user &&
-        property?.owner?.firebaseUid === user.uid;
+        (String(ownerId) === String(user._id) ||
+            property?.owner?.firebaseUid === user.firebaseUid);
+
+    const backTo = user?.role === "STUDENT" ? "/dashboard" : "/properties";
 
     // =========================
     // LOADING
@@ -250,10 +256,10 @@ const PropertyDetails = () => {
                 </p>
 
                 <Link
-                    to="/properties"
+                    to={backTo}
                     className="mt-4 text-sm font-medium text-violet-600"
                 >
-                    Back to Properties
+                    {user?.role === "STUDENT" ? "Back to Home" : "Back to Properties"}
                 </Link>
             </div>
         );
@@ -274,7 +280,7 @@ const PropertyDetails = () => {
                     <div className="flex items-center gap-3">
 
                         <Link
-                            to="/properties"
+                            to={backTo}
                             className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-800 transition hover:bg-gray-100"
                         >
                             ←
@@ -286,13 +292,44 @@ const PropertyDetails = () => {
 
                     </div>
 
-                    {/* Edit button */}
-                    <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50"
-                    >
-                        ✎
-                    </button>
+                    {isOwner ? (
+                        <div className="flex items-center gap-2">
+                        <Link
+                            to={`/properties/${property._id}/media`}
+                            className="rounded-full bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700"
+                        >
+                            + Media
+                        </Link>
+                        <button
+                            type="button"
+                            disabled={deleting}
+                            onClick={async () => {
+                                const confirmed = window.confirm(
+                                    "Delete this property and all its rooms, media, and reviews?"
+                                );
+                                if (!confirmed) return;
+                                try {
+                                    setDeleting(true);
+                                    await deleteProperty(property._id);
+                                    navigate("/properties");
+                                } catch (err) {
+                                    console.error(err);
+                                    window.alert(
+                                        err.response?.data?.message ||
+                                            "Failed to delete property"
+                                    );
+                                } finally {
+                                    setDeleting(false);
+                                }
+                            }}
+                            className="rounded-full bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-60"
+                        >
+                            {deleting ? "Deleting..." : "Delete"}
+                        </button>
+                        </div>
+                    ) : (
+                        <span className="h-9 w-9" />
+                    )}
 
                 </div>
             </header>
@@ -303,45 +340,18 @@ const PropertyDetails = () => {
 
                 {/* ================= HERO IMAGE ================= */}
 
-                <div className="relative overflow-hidden rounded-2xl bg-gray-200">
-
-                    {mediaLoading ? (
-                        <div className="flex h-60 items-center justify-center">
-                            <p className="text-sm text-gray-500">
-                                Loading image...
-                            </p>
-                        </div>
-                    ) : !primaryMedia ? (
-                        <div className="flex h-60 flex-col items-center justify-center">
-                            <span className="text-5xl">🏠</span>
-
-                            <p className="mt-2 text-sm text-gray-500">
-                                No images available
-                            </p>
-                        </div>
-                    ) : primaryMedia.type === "IMAGE" ? (
-                        <img
-                            src={primaryMedia.url}
-                            alt={property.name}
-                            className="h-60 w-full object-cover"
-                        />
-                    ) : (
-                        <video
-                            src={primaryMedia.url}
-                            controls
-                            className="h-60 w-full object-cover"
-                        />
-                    )}
-
-                    {/* Image count */}
-
-                    {media.length > 0 && (
-                        <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                            1/{media.length}
-                        </span>
-                    )}
-
-                </div>
+                {mediaLoading ? (
+                    <div className="flex h-60 items-center justify-center rounded-2xl bg-gray-200">
+                        <p className="text-sm text-gray-500">
+                            Loading image...
+                        </p>
+                    </div>
+                ) : (
+                    <PropertyMediaCarousel
+                        media={media}
+                        alt={property.name}
+                    />
+                )}
 
                 {/* ================= PROPERTY INFO ================= */}
 
@@ -361,14 +371,43 @@ const PropertyDetails = () => {
 
                         </div>
 
-                        <span
-                            className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${property.status === "ACTIVE"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
+                        {isOwner ? (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const nextStatus =
+                                        property.status === "ACTIVE"
+                                            ? "INACTIVE"
+                                            : "ACTIVE";
+                                    try {
+                                        const data = await updatePropertyStatus(
+                                            property._id,
+                                            nextStatus
+                                        );
+                                        setProperty(data.property);
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${
+                                    property.status === "ACTIVE"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-yellow-100 text-yellow-700"
                                 }`}
-                        >
-                            {property.status}
-                        </span>
+                            >
+                                {property.status}
+                            </button>
+                        ) : (
+                            <span
+                                className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${
+                                    property.status === "ACTIVE"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-yellow-100 text-yellow-700"
+                                }`}
+                            >
+                                {property.status}
+                            </span>
+                        )}
 
                     </div>
 
@@ -394,6 +433,17 @@ const PropertyDetails = () => {
                         </p>
                     )}
 
+                    {user?.role === "STUDENT" && (
+                        <div className="mt-4">
+                            <ContactOwnerButton
+                                phone={property.owner?.phone}
+                                ownerName={property.owner?.name}
+                                propertyName={property.name}
+                                available={totalRooms > 0}
+                            />
+                        </div>
+                    )}
+
                 </section>
 
                 {/* ================= OVERVIEW ================= */}
@@ -411,7 +461,7 @@ const PropertyDetails = () => {
                         <div className="rounded-xl border border-gray-100 bg-white px-2 py-4 text-center shadow-sm">
 
                             <p className="text-lg font-bold text-gray-900">
-                                {roomsLoading ? "—" : rooms.length}
+                                {roomsLoading ? "—" : totalRooms}
                             </p>
 
                             <p className="mt-1 text-[10px] text-gray-500">
@@ -504,6 +554,92 @@ const PropertyDetails = () => {
 
                 </section>
 
+                {/* ================= LOCATION ================= */}
+                <section className="mt-5">
+                    <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                        Location
+                    </h3>
+                    {isOwner && (
+                        <Link
+                            to={`/properties/${property._id}/location`}
+                            className="text-xs font-medium text-violet-600"
+                        >
+                            {location ? "Edit" : "Add location"}
+                        </Link>
+                    )}
+                    </div>
+
+                    {locationLoading ? (
+                        <p className="text-sm text-gray-400">Loading map...</p>
+                    ) : location ? (
+                        <>
+                            {location.address && (
+                                <p className="mb-2 text-sm text-gray-500">
+                                    {location.address}
+                                </p>
+                            )}
+                            <PropertyMap
+                                latitude={location.latitude}
+                                longitude={location.longitude}
+                                propertyName={property.name}
+                            />
+                        </>
+                    ) : (
+                        <p className="text-sm text-gray-400">
+                            Location not added yet.
+                        </p>
+                    )}
+                </section>
+
+                {/* ================= REVIEWS ================= */}
+                <section className="mt-5">
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Reviews
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                            {reviewsLoading
+                                ? "..."
+                                : `${reviews.length} review${reviews.length === 1 ? "" : "s"}`}
+                        </span>
+                    </div>
+
+                    {reviewsLoading ? (
+                        <p className="text-sm text-gray-400">Loading reviews...</p>
+                    ) : reviews.length === 0 ? (
+                        <p className="text-sm text-gray-400">
+                            No reviews yet.
+                        </p>
+                    ) : (
+                        <div className="space-y-2">
+                            {reviews.map((review) => (
+                                <div
+                                    key={review._id}
+                                    className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-gray-900">
+                                            {review.user?.name || "Student"}
+                                        </p>
+                                        <p className="text-xs font-medium text-yellow-500">
+                                            {"★".repeat(Number(review.rating) || 0)}
+                                            <span className="ml-1 text-gray-400">
+                                                {review.rating}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    {review.comment && (
+                                        <p className="mt-1.5 text-sm leading-5 text-gray-500">
+                                            {review.comment}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
                 {/* ================= ROOMS ================= */}
 
 
@@ -520,7 +656,7 @@ const PropertyDetails = () => {
                         <div className="flex items-center gap-3">
 
                             <span className="text-sm text-gray-500">
-                                {rooms.length} rooms
+                                {totalRooms} rooms
                             </span>
 
                             {isOwner && (

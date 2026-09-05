@@ -7,7 +7,7 @@ export default function MainPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate("/login");
-    }, 1000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [navigate]);

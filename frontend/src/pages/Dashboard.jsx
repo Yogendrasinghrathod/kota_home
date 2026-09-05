@@ -1,148 +1,359 @@
-import { useAuth } from "../context/AuthContext.jsx";
-import { logoutUser } from "../config/services/authService";
-import { auth } from "../config/firebase.js";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-const Dashboard = () => {
-    const { user } = useAuth();
+import { useAuth } from "../context/AuthContext.jsx";
+import StudentDashboard from "./StudentDashboard.jsx";
+import { getProperties } from "../config/services/propertyService.js";
+import { getOwnerReviews } from "../config/services/reviewService.js";
 
-    const handleLogout = async () => {
-        try {
-            await logoutUser();
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+const Dashboard = () => {
+  const { user } = useAuth();
+
+  if (user?.role === "STUDENT") {
+    return <StudentDashboard />;
+  }
+
+  return <OwnerDashboard />;
+};
+
+const OwnerDashboard = () => {
+  const { user } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [propertyData, reviewData] = await Promise.all([
+          getProperties(),
+          getOwnerReviews(),
+        ]);
+        setProperties(propertyData.properties || []);
+        setReviewCount(reviewData.count || 0);
+      } catch (error) {
+        console.error("Failed to load owner dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // const testCreateProperty = async () => {
-    //     try {
-    //         const firebaseUser = auth.currentUser;
+    load();
+  }, []);
 
-    //         if (!firebaseUser) {
-    //             throw new Error("No Firebase user logged in");
-    //         }
+  const totalRooms = useMemo(
+    () =>
+      properties.reduce(
+        (sum, property) => sum + Number(property.roomCount || 0),
+        0
+      ),
+    [properties]
+  );
 
-    //         // Get Firebase ID token
-    //         const idToken = await firebaseUser.getIdToken();
+  const recentProperties = properties.slice(0, 3);
+  const displayName = (user?.name || "Owner").split(" ")[0];
 
-    //         // Call backend
-    //         const response = await fetch(
-    //             "http://localhost:3000/api/properties",
-    //             {
-    //                 method: "POST",
-    //                 headers: {
-    //                     "Content-Type": "application/json",
-    //                     Authorization: `Bearer ${idToken}`,
-    //                 },
-    //                 body: JSON.stringify({
-    //                     name: "Sharma Boys PG",
-    //                     type: "PG",
-    //                     gender: "MALE",
-    //                     description: "Student-friendly PG near Allen",
-    //                 }),
-    //             }
-    //         );
+  return (
+    <div className="min-h-screen w-full bg-slate-100 flex justify-center">
+      <div className="relative min-h-screen w-full max-w-[375px] overflow-hidden bg-white shadow-xl">
 
-    //         const data = await response.json();
+        {/* HEADER */}
+        <header className="border-b border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button className="text-lg text-gray-700">
+              ☰
+            </button>
 
-    //         console.log("Property API response:", data);
+            <h1 className="text-sm font-bold text-gray-900">
+              Kota Home
+            </h1>
 
-    //         if (!response.ok) {
-    //             throw new Error(data.message || "Failed to create property");
-    //         }
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">
+                ♧
+              </span>
 
-    //         alert("Property created successfully!");
-    //     } catch (error) {
-    //         console.error("Property creation error:", error);
-    //         alert(error.message);
-    //     }
-    // };
-    // const testCreateRoom = async () => {
-    //     try {
-    //         const firebaseUser = auth.currentUser;
+              <Link
+                to="/profile"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700"
+              >
+                {(user?.name || "O").trim().charAt(0).toUpperCase()}
+              </Link>
+            </div>
+          </div>
+        </header>
 
-    //         if (!firebaseUser) {
-    //             throw new Error("No Firebase user logged in");
-    //         }
+        {/* CONTENT */}
+        <main className="px-4 pb-20 pt-4">
 
-    //         const idToken = await firebaseUser.getIdToken();
+          {/* GREETING */}
+          <section>
+            <p className="text-xs text-gray-500">
+              Hi, {displayName} 👋
+            </p>
 
-    //         // Use the _id of the property you already created
-    //         const propertyId = "6a953c899f255f087382593c";
+            <h2 className="mt-1 text-base font-bold text-gray-900">
+              Welcome back!
+            </h2>
+          </section>
 
-    //         const response = await fetch(
-    //             `http://localhost:3000/api/properties/${propertyId}/rooms`,
-    //             {
-    //                 method: "POST",
-    //                 headers: {
-    //                     "Content-Type": "application/json",
-    //                     Authorization: `Bearer ${idToken}`,
-    //                 },
-    //                 body: JSON.stringify({
-    //                     price: 10000,
-    //                     sharing: 2,
-    //                     availability: 5,
-    //                 }),
-    //             }
-    //         );
+          {/* POST PROPERTY CARD */}
+          <section className="mt-4 rounded-xl bg-violet-50 p-3">
+            <div className="flex items-center justify-between">
 
-    //         const data = await response.json();
+              <div>
+                <h3 className="text-xs font-semibold text-violet-800">
+                  Post Your Property
+                </h3>
 
-    //         console.log("Room API response:", data);
+                <p className="mt-1 max-w-[175px] text-[9px] leading-3 text-gray-500">
+                  List your PG / Property and
+                  get more tenants
+                </p>
 
-    //         if (!response.ok) {
-    //             throw new Error(data.message || "Failed to create room");
-    //         }
+                <Link
+                  to="/properties/add"
+                  className="mt-2 inline-block rounded-md bg-violet-600 px-3 py-1.5 text-[9px] font-semibold text-white"
+                >
+                  + Add Property
+                </Link>
+              </div>
 
-    //         alert("Room created successfully!");
-    //     } catch (error) {
-    //         console.error("Room creation error:", error);
-    //         alert(error.message);
-    //     }
-    // };
-    return (
-        <div style={{ padding: "40px" }}>
-            <h1>Dashboard 🔐</h1>
+              {/* PROPERTY ILLUSTRATION */}
+              <div className="flex h-16 w-20 items-center justify-center">
+                <svg
+                  viewBox="0 0 100 70"
+                  className="h-full w-full"
+                >
+                  <rect
+                    x="25"
+                    y="25"
+                    width="50"
+                    height="40"
+                    rx="2"
+                    fill="#8b7ce0"
+                  />
 
-            {user && (
-                <>
-                    <p>
-                        <strong>MongoDB ID:</strong> {user._id}
-                    </p>
+                  <polygon
+                    points="20,27 50,8 80,27"
+                    fill="#6752c7"
+                  />
 
-                    <p>
-                        <strong>Firebase UID:</strong> {user.firebaseUid}
-                    </p>
+                  <rect
+                    x="43"
+                    y="43"
+                    width="14"
+                    height="22"
+                    fill="#eeeaff"
+                  />
 
-                    <p>
-                        <strong>Phone:</strong> {user.phone}
-                    </p>
+                  <rect
+                    x="31"
+                    y="34"
+                    width="8"
+                    height="8"
+                    fill="#eeeaff"
+                  />
 
-                    <p>
-                        <strong>Role:</strong> {user.role}
-                    </p>
+                  <rect
+                    x="61"
+                    y="34"
+                    width="8"
+                    height="8"
+                    fill="#eeeaff"
+                  />
 
-                    <br />
+                  <circle
+                    cx="80"
+                    cy="20"
+                    r="7"
+                    fill="#a99beb"
+                  />
 
-                    {/* <button onClick={testCreateProperty}>
-                        Test Create Property
-                    </button> */}
-                    {/* <button onClick={testCreateRoom}>
-                        Test Create Room
-                    </button> */}
-                    <Link to="/properties">
-                        <button>View Properties</button>
-                    </Link>
+                  <path
+                    d="M80 15v10M75 20h10"
+                    stroke="white"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+              </div>
 
-                    <br />
-                    <br />
+            </div>
+          </section>
 
-                    <button onClick={handleLogout}>
-                        Logout
-                    </button>
-                </>
+          {/* OVERVIEW */}
+          <section className="mt-5">
+            <h3 className="mb-2 text-xs font-semibold text-gray-900">
+              Overview
+            </h3>
+
+            <div className="grid grid-cols-3 gap-2">
+
+              <div className="rounded-lg border border-gray-100 bg-white p-2.5 text-center shadow-sm">
+                <p className="text-[9px] text-gray-500">
+                  My Properties
+                </p>
+                <p className="mt-1 text-sm font-bold text-gray-900">
+                  {loading ? "—" : properties.length}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-gray-100 bg-white p-2.5 text-center shadow-sm">
+                <p className="text-[9px] text-gray-500">
+                  Total Rooms
+                </p>
+                <p className="mt-1 text-sm font-bold text-gray-900">
+                  {loading ? "—" : totalRooms}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-gray-100 bg-white p-2.5 text-center shadow-sm">
+                <p className="text-[9px] text-gray-500">
+                  Total Reviews
+                </p>
+                <p className="mt-1 text-sm font-bold text-gray-900">
+                  {loading ? "—" : reviewCount}
+                </p>
+              </div>
+
+            </div>
+          </section>
+
+          {/* RECENT PROPERTIES */}
+          <section className="mt-5">
+
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-gray-900">
+                Recent Properties
+              </h3>
+
+              <Link
+                to="/properties"
+                className="text-[9px] font-medium text-violet-600"
+              >
+                View All
+              </Link>
+            </div>
+
+            {loading ? (
+              <p className="text-[10px] text-gray-400">Loading properties...</p>
+            ) : recentProperties.length === 0 ? (
+              <p className="rounded-xl border border-gray-100 bg-white p-3 text-[10px] text-gray-400">
+                No properties yet. Add your first PG.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {recentProperties.map((property) => (
+                  <Link
+                    key={property._id}
+                    to={`/properties/${property._id}`}
+                    className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-2 shadow-sm"
+                  >
+                    <div className="h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      {property.image ? (
+                        <img
+                          src={property.image}
+                          alt={property.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center bg-violet-100 text-2xl">
+                          🏠
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="truncate text-[10px] font-semibold text-gray-900">
+                          {property.name}
+                        </h4>
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[7px] font-semibold ${
+                            property.status === "ACTIVE"
+                              ? "bg-green-50 text-green-600"
+                              : "bg-yellow-50 text-yellow-700"
+                          }`}
+                        >
+                          {property.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-[9px] text-gray-500">
+                        {property.area || property.address || "Location not added"}
+                      </p>
+                      <p className="mt-1 text-[9px] text-gray-500">
+                        {property.roomTypes || 0} Rooms • {property.roomCount || 0} Available
+                      </p>
+                    </div>
+                    <span className="text-sm text-gray-400">›</span>
+                  </Link>
+                ))}
+              </div>
             )}
-        </div>
-    );
+
+          </section>
+
+        </main>
+
+        {/* BOTTOM NAVIGATION */}
+        <nav className="absolute bottom-0 left-0 right-0 border-t border-gray-100 bg-white">
+          <div className="grid grid-cols-5">
+
+            <Link
+              to="/dashboard"
+              className="flex flex-col items-center py-2 text-violet-600"
+            >
+              <span className="text-sm">⌂</span>
+              <span className="mt-0.5 text-[8px] font-medium">
+                Home
+              </span>
+            </Link>
+
+            <Link
+              to="/properties"
+              className="flex flex-col items-center py-2 text-gray-400"
+            >
+              <span className="text-sm">▣</span>
+              <span className="mt-0.5 text-[8px]">
+                Properties
+              </span>
+            </Link>
+
+            <Link
+              to="/properties/add"
+              className="flex flex-col items-center py-2 text-gray-400"
+            >
+              <span className="text-sm">＋</span>
+              <span className="mt-0.5 text-[8px]">
+                Add
+              </span>
+            </Link>
+
+            <Link
+              to="/reviews"
+              className="flex flex-col items-center py-2 text-gray-400"
+            >
+              <span className="text-sm">☆</span>
+              <span className="mt-0.5 text-[8px]">
+                Reviews
+              </span>
+            </Link>
+
+            <Link
+              to="/profile"
+              className="flex flex-col items-center py-2 text-gray-400"
+            >
+              <span className="text-sm">♙</span>
+              <span className="mt-0.5 text-[8px]">
+                Profile
+              </span>
+            </Link>
+
+          </div>
+        </nav>
+
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;

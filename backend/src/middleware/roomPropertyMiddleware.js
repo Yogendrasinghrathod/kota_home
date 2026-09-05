@@ -6,10 +6,7 @@ export const verifyRoomBelongsToProperty = async (req, res, next) => {
     const { roomId } = req.body;
 
     if (!roomId) {
-      return res.status(400).json({
-        success: false,
-        message: "roomId is required",
-      });
+      return next();
     }
 
     const room = await Room.findById(roomId);

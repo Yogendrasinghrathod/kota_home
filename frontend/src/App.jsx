@@ -9,6 +9,12 @@ import DisplayRooms from "./pages/DisplayRooms.jsx";
 import RoomDetails from "./pages/RoomDetails.jsx";
 import RoomPhotos from "./pages/RoomPhotos.jsx";
 import StartPage from "./pages/StartPage.jsx";
+import Profile from "./pages/Profile.jsx";
+import AddProperty from "./pages/AddProperty.jsx";
+import AddPropertyMedia from "./pages/AddPropertyMedia.jsx";
+import AddPropertyLocation from "./pages/AddPropertyLocation.jsx";
+import AddRoom from "./pages/AddRoom.jsx";
+import OwnerReviews from "./pages/OwnerReviews.jsx";
 function App() {
   return (
     <BrowserRouter>
@@ -26,10 +32,50 @@ function App() {
           }
         />
         <Route
-          path="/properties"
+          path="/profile"
           element={
             <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+              <OwnerReviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties"
+          element={
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
               <Properties />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties/add"
+          element={
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+              <AddProperty />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties/:id/location"
+          element={
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+              <AddPropertyLocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties/:id/media"
+          element={
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+              <AddPropertyMedia />
             </ProtectedRoute>
           }
         />
@@ -51,19 +97,26 @@ function App() {
           }
         />
         <Route
-          path="/properties/:propertyId/rooms/:roomId"
+          path="/properties/:propertyId/rooms/add"
           element={
-            <ProtectedRoute>
-              <RoomDetails />
+            <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+              <AddRoom />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/properties/:propertyId/rooms/photos"
           element={
             <ProtectedRoute>
               <RoomPhotos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/properties/:propertyId/rooms/:roomId"
+          element={
+            <ProtectedRoute>
+              <RoomDetails />
             </ProtectedRoute>
           }
         />

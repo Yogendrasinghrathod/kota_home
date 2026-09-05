@@ -7,3 +7,12 @@ export const getMediaByProperty = async (propertyId) => {
 
   return response.data;
 };
+
+export const createMedia = async (propertyId, mediaData) => {
+  const response = await api.post(
+    `/properties/${propertyId}/media`,
+    mediaData
+  );
+
+  return response.data;
+};

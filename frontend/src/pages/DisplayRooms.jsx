@@ -4,9 +4,12 @@ import { Link, useParams } from "react-router-dom";
 import { getRoomsByProperty } from "../config/services/roomService.js";
 import { getMediaByProperty } from "../config/services/mediaService.js";
 import RoomCard from "../components/RoomCard.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const DisplayRooms = () => {
     const { propertyId } = useParams();
+    const { user } = useAuth();
+    const isOwner = user?.role === "OWNER" || user?.role === "ADMIN";
 
     const [rooms, setRooms] = useState([]);
     const [media, setMedia] = useState([]);
@@ -70,6 +73,15 @@ const DisplayRooms = () => {
                         Available Rooms
                     </h1>
 
+                    {isOwner && (
+                        <Link
+                            to={`/properties/${propertyId}/rooms/add`}
+                            className="ml-auto rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white"
+                        >
+                            + Add Room
+                        </Link>
+                    )}
+
                 </div>
             </header>
 
@@ -99,13 +111,22 @@ const DisplayRooms = () => {
                 ) : (
                     <div className="space-y-3">
 
-                        {rooms.map((room) => (
+                        {rooms.map((room) => {
+                            const roomImage =
+                                media.find(
+                                    (item) =>
+                                        String(item.room) === String(room._id) &&
+                                        item.type === "IMAGE"
+                                ) || primaryImage;
+
+                            return (
                             <RoomCard
                                 key={room._id}
                                 room={room}
-                                image={primaryImage?.url}
+                                image={roomImage?.url}
                             />
-                        ))}
+                            );
+                        })}
 
                     </div>
                 )}

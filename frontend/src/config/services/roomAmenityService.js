@@ -7,3 +7,12 @@ export const getRoomAmenities = async (roomId) => {
 
     return response.data;
 };
+
+export const addAmenityToRoom = async (roomId, amenityId) => {
+    const response = await api.post(
+        `/rooms/${roomId}/amenities`,
+        { amenityId }
+    );
+
+    return response.data;
+};

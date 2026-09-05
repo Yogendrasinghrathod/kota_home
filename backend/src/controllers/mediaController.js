@@ -3,14 +3,34 @@ import Media from "../models/Media.js";
 export const createMedia = async (req, res) => {
   try {
     const { propertyId } = req.params;
-    const { roomId, type, url, isPrimary } = req.body;
+    const { roomId, type, url, isPrimary, publicId, resourceType } = req.body;
+
+    if (!url || !type) {
+      return res.status(400).json({
+        success: false,
+        message: "url and type are required",
+      });
+    }
+
+    let primary = Boolean(isPrimary);
+
+    if (type === "IMAGE" && !primary) {
+      const existingPrimary = await Media.findOne({
+        property: propertyId,
+        type: "IMAGE",
+        isPrimary: true,
+      });
+      primary = !existingPrimary;
+    }
 
     const media = await Media.create({
       property: propertyId,
-      room: roomId,
+      room: roomId || undefined,
       type,
       url,
-      isPrimary,
+      publicId: publicId || undefined,
+      resourceType: resourceType || undefined,
+      isPrimary: primary,
     });
 
     return res.status(201).json({

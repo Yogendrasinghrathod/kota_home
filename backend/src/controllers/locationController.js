@@ -14,9 +14,16 @@ export const createLocation = async (req, res) => {
     });
 
     if (existingLocation) {
-      return res.status(409).json({
-        success: false,
-        message: "Location already exists for this property",
+      existingLocation.address = address;
+      existingLocation.area = area;
+      existingLocation.latitude = latitude;
+      existingLocation.longitude = longitude;
+      await existingLocation.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Location updated successfully",
+        location: existingLocation,
       });
     }
 

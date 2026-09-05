@@ -2,15 +2,27 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { getRoomById } from "../config/services/roomService.js";
-import { getRoomAmenities } from "../config/services/roomAmenityService.js";
-import { getMediaByProperty } from "../config/services/mediaService.js";
+import { getRoomAmenities, addAmenityToRoom } from "../config/services/roomAmenityService.js";
+import { getAmenities, createAmenity } from "../config/services/amenityService.js";
+import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
+import { uploadToCloudinary } from "../config/cloudinary.js";
+import { getPropertyById } from "../config/services/propertyService.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
 
 const RoomDetails = () => {
+    const { user } = useAuth();
     const { propertyId, roomId } = useParams();
 
     const [room, setRoom] = useState(null);
+    const [property, setProperty] = useState(null);
     const [amenities, setAmenities] = useState([]);
+    const [allAmenities, setAllAmenities] = useState([]);
+    const [newAmenity, setNewAmenity] = useState("");
+    const [roomMedia, setRoomMedia] = useState([]);
     const [image, setImage] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [ownerError, setOwnerError] = useState("");
 
     const [loading, setLoading] = useState(true);
 
@@ -20,6 +32,16 @@ const RoomDetails = () => {
                 // Room
                 const roomData = await getRoomById(propertyId, roomId);
                 setRoom(roomData.room);
+
+                try {
+                    const propertyData = await getPropertyById(propertyId);
+                    setProperty(propertyData.property);
+                } catch (error) {
+                    console.error(
+                        "PROPERTY ERROR:",
+                        error.response?.data || error.message
+                    );
+                }
 
                 // Room Amenities
                 try {
@@ -36,22 +58,33 @@ const RoomDetails = () => {
                 // Property Media
                 try {
                     const mediaData = await getMediaByProperty(propertyId);
+                    const items = mediaData.media || [];
+                    const forRoom = items.filter(
+                        (item) => String(item.room) === String(roomId)
+                    );
+                    setRoomMedia(forRoom);
 
-                    const primaryImage =
-                        mediaData.media?.find(
+                    const roomImage =
+                        forRoom.find((item) => item.type === "IMAGE") ||
+                        items.find(
                             (item) =>
                                 item.isPrimary && item.type === "IMAGE"
                         ) ||
-                        mediaData.media?.find(
-                            (item) => item.type === "IMAGE"
-                        );
+                        items.find((item) => item.type === "IMAGE");
 
-                    setImage(primaryImage?.url || null);
+                    setImage(roomImage?.url || null);
                 } catch (error) {
                     console.error(
                         "ROOM IMAGE ERROR:",
                         error.response?.data || error.message
                     );
+                }
+
+                try {
+                    const catalog = await getAmenities();
+                    setAllAmenities(catalog.amenities || []);
+                } catch {
+                    setAllAmenities([]);
                 }
             } catch (error) {
                 console.error(
@@ -72,6 +105,80 @@ const RoomDetails = () => {
         if (sharing === 3) return "Triple Sharing Room";
 
         return `${sharing} Sharing Room`;
+    };
+
+    const isOwner =
+        user?.role === "OWNER" &&
+        (property?.owner?.firebaseUid === user?.firebaseUid ||
+            property?.owner?.firebaseUid === user?.uid);
+
+    const assignedIds = new Set(amenities.map((item) => item._id));
+
+    const refreshRoomExtras = async () => {
+        const [amenityData, mediaData] = await Promise.all([
+            getRoomAmenities(roomId),
+            getMediaByProperty(propertyId),
+        ]);
+        setAmenities(amenityData.amenities || []);
+        const items = mediaData.media || [];
+        const forRoom = items.filter(
+            (item) => String(item.room) === String(roomId)
+        );
+        setRoomMedia(forRoom);
+        const roomImage =
+            forRoom.find((item) => item.type === "IMAGE") ||
+            items.find((item) => item.type === "IMAGE");
+        setImage(roomImage?.url || null);
+    };
+
+    const handleAddAmenity = async (amenityId) => {
+        try {
+            setOwnerError("");
+            await addAmenityToRoom(roomId, amenityId);
+            await refreshRoomExtras();
+        } catch (err) {
+            setOwnerError(err.response?.data?.message || "Failed to add amenity");
+        }
+    };
+
+    const handleCreateAmenity = async () => {
+        const name = newAmenity.trim();
+        if (!name) return;
+        try {
+            setOwnerError("");
+            const data = await createAmenity(name);
+            setAllAmenities((current) => [...current, data.amenity]);
+            await addAmenityToRoom(roomId, data.amenity._id);
+            setNewAmenity("");
+            await refreshRoomExtras();
+        } catch (err) {
+            setOwnerError(err.response?.data?.message || "Failed to create amenity");
+        }
+    };
+
+    const handleFiles = async (event) => {
+        const files = [...(event.target.files || [])];
+        event.target.value = "";
+        if (files.length === 0) return;
+        try {
+            setUploading(true);
+            setOwnerError("");
+            for (const file of files) {
+                const uploaded = await uploadToCloudinary(file);
+                await createMedia(propertyId, {
+                    roomId,
+                    type: uploaded.type,
+                    url: uploaded.url,
+                    publicId: uploaded.publicId,
+                    resourceType: uploaded.resourceType,
+                });
+            }
+            await refreshRoomExtras();
+        } catch (err) {
+            setOwnerError(err.response?.data?.message || err.message || "Upload failed");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const getAmenityIcon = (name = "") => {
@@ -137,7 +244,7 @@ const RoomDetails = () => {
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-2xl pb-8">
+            <main className="mx-auto w-full max-w-2xl pb-28">
 
                 {/* ROOM IMAGE */}
                 <div className="relative h-64 w-full overflow-hidden bg-gray-200">
@@ -269,6 +376,80 @@ const RoomDetails = () => {
 
                 </section>
 
+                {isOwner && (
+                    <section className="mt-5 px-5">
+                        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                            Manage room
+                        </h3>
+                        <p className="text-xs text-gray-500">Tap to add amenities</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {allAmenities.map((amenity) => {
+                                const assigned = assignedIds.has(amenity._id);
+                                return (
+                                    <button
+                                        key={amenity._id}
+                                        type="button"
+                                        disabled={assigned}
+                                        onClick={() => handleAddAmenity(amenity._id)}
+                                        className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                                            assigned
+                                                ? "bg-violet-600 text-white"
+                                                : "bg-white text-gray-700 shadow-sm"
+                                        }`}
+                                    >
+                                        {amenity.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                            <input
+                                value={newAmenity}
+                                onChange={(event) => setNewAmenity(event.target.value)}
+                                placeholder="Custom amenity"
+                                className="h-10 flex-1 rounded-xl border border-gray-200 px-3 text-sm outline-none"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleCreateAmenity}
+                                className="rounded-xl bg-gray-900 px-3 text-xs font-semibold text-white"
+                            >
+                                Add
+                            </button>
+                        </div>
+
+                        <label className="mt-4 flex h-20 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-violet-200 bg-violet-50">
+                            <input
+                                type="file"
+                                accept="image/*,video/*"
+                                multiple
+                                className="hidden"
+                                onChange={handleFiles}
+                                disabled={uploading}
+                            />
+                            <p className="text-xs font-medium text-violet-700">
+                                {uploading ? "Uploading..." : "Upload room photos / videos"}
+                            </p>
+                        </label>
+                        {roomMedia.length > 0 && (
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                                {roomMedia.map((item) => (
+                                    <div key={item._id} className="overflow-hidden rounded-lg bg-gray-100">
+                                        {item.type === "VIDEO" ? (
+                                            <video src={item.url} className="h-20 w-full object-cover" />
+                                        ) : (
+                                            <img src={item.url} alt="" className="h-20 w-full object-cover" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {ownerError && (
+                            <p className="mt-2 text-xs text-red-500">{ownerError}</p>
+                        )}
+                    </section>
+                )}
+
                 {/* DESCRIPTION */}
                 <section className="mt-5 px-5">
 
@@ -284,6 +465,20 @@ const RoomDetails = () => {
                 </section>
 
             </main>
+
+            {user?.role === "STUDENT" && (
+                <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white px-4 py-3">
+                    <div className="mx-auto w-full max-w-2xl">
+                        <ContactOwnerButton
+                            phone={property?.owner?.phone}
+                            ownerName={property?.owner?.name}
+                            propertyName={property?.name}
+                            roomLabel={getRoomTitle(room.sharing)}
+                            available={Number(room.availability) > 0}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

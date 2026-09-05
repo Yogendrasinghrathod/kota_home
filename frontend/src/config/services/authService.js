@@ -1,54 +1,52 @@
 import {
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
+  signInWithCustomToken,
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
 
+import api from "../axios.js";
 import { auth } from "../firebase";
 
-export const setupRecaptcha = () => {
-  if (!window.recaptchaVerifier) {
-    window.recaptchaVerifier = new RecaptchaVerifier(
-      auth,
-      "recaptcha-container",
-      {
-        size: "invisible",
-      }
-    );
-  }
-};
-
-export const sendOTP = async (phoneNumber) => {
-  setupRecaptcha();
-
-  const appVerifier = window.recaptchaVerifier;
-
-  const confirmationResult = await signInWithPhoneNumber(
-    auth,
-    phoneNumber,
-    appVerifier
-  );
-
-  window.confirmationResult = confirmationResult;
-
-  return confirmationResult;
-};
-
-export const verifyOTP = async (otp) => {
-  if (!window.confirmationResult) {
-    throw new Error("Please request OTP first");
-  }
-
-  const result = await window.confirmationResult.confirm(otp);
-
-  return result.user;
-};
-
-// Listen for Firebase authentication state changes
 export const subscribeToAuthState = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
+
 export const logoutUser = async () => {
   await signOut(auth);
+};
+
+export const exchangePhoneEmailToken = async (accessToken) => {
+  const response = await api.post("/auth/phone-email", {
+    access_token: accessToken,
+  });
+  return response.data;
+};
+
+export const signInWithPhoneEmail = async (customToken) => {
+  const result = await signInWithCustomToken(auth, customToken);
+  return result.user;
+};
+
+export const loginUser = async (idToken, role) => {
+  const response = await api.post(
+    "/auth/login",
+    { role },
+    {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const getCurrentUser = async () => {
+  const response = await api.get("/auth/me");
+  return response.data;
+};
+
+export const updateProfile = async (name) => {
+  const response = await api.patch("/auth/profile", { name });
+  return response.data;
 };

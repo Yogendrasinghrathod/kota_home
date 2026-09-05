@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { getProperties } from "../config/services/propertyService.js";
+import { Link, useLocation } from "react-router-dom";
+import { getProperties, updatePropertyStatus } from "../config/services/propertyService.js";
 
 const Properties = () => {
   const [properties, setProperties] = useState([]);
@@ -10,9 +10,13 @@ const Properties = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
+  const location = useLocation();
+
   useEffect(() => {
     const fetchProperties = async () => {
       try {
+        setLoading(true);
+        setError("");
         const data = await getProperties();
 
         setProperties(data.properties || []);
@@ -25,7 +29,7 @@ const Properties = () => {
     };
 
     fetchProperties();
-  }, []);
+  }, [location.key]);
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -224,7 +228,31 @@ const Properties = () => {
                         {property.name}
                       </h2>
 
-                      <span
+                      <button
+                        type="button"
+                        onClick={async (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          const nextStatus =
+                            property.status === "ACTIVE"
+                              ? "INACTIVE"
+                              : "ACTIVE";
+                          try {
+                            const data = await updatePropertyStatus(
+                              property._id,
+                              nextStatus
+                            );
+                            setProperties((current) =>
+                              current.map((item) =>
+                                item._id === property._id
+                                  ? { ...item, status: data.property.status }
+                                  : item
+                              )
+                            );
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
                         className={`
                           shrink-0
                           rounded-md
@@ -240,12 +268,12 @@ const Properties = () => {
                         `}
                       >
                         {property.status}
-                      </span>
+                      </button>
 
                     </div>
 
-                    <p className="mt-1 text-xs text-gray-500">
-                      📍 {property.area || "Kota"}
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                      📍 {property.area || property.address || "Location not added"}
                     </p>
 
                     <div className="mt-3 flex items-center justify-between">

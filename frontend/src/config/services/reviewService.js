@@ -7,3 +7,8 @@ export const getReviewsByProperty = async (propertyId) => {
 
     return response.data;
 };
+
+export const getOwnerReviews = async () => {
+    const response = await api.get("/reviews/mine");
+    return response.data;
+};

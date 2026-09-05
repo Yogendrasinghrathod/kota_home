@@ -14,3 +14,12 @@ export const getRoomById = async (propertyId, roomId) => {
 
   return response.data;
 };
+
+export const createRoom = async (propertyId, roomData) => {
+  const response = await api.post(
+    `/properties/${propertyId}/rooms`,
+    roomData
+  );
+
+  return response.data;
+};

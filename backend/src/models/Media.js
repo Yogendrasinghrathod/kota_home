@@ -11,7 +11,6 @@ const mediaSchema = new mongoose.Schema(
     room: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Room",
-      required: true,
     },
 
     type: {
@@ -24,6 +23,16 @@ const mediaSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+
+    publicId: {
+      type: String,
+      trim: true,
+    },
+
+    resourceType: {
+      type: String,
+      enum: ["image", "video", "raw"],
     },
 
     isPrimary: {

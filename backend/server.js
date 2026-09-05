@@ -11,6 +11,8 @@ import amenityRoutes from "./src/routes/amenityRoutes.js";
 import roomAmenityRoutes from "./src/routes/roomAmenityRoutes.js";
 import mediaRoutes from "./src/routes/mediaRoutes.js";
 import reviewRoutes from "./src/routes/reviewRoutes.js";
+import geocodeRoutes from "./src/routes/geocodeRoutes.js";
+import ownerReviewRoutes from "./src/routes/ownerReviewRoutes.js";
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -29,6 +31,8 @@ app.use("/api/amenities", amenityRoutes);
 app.use("/api/rooms", roomAmenityRoutes);
 app.use("/api/properties", mediaRoutes);
 app.use("/api/properties", reviewRoutes);
+app.use("/api/geocode", geocodeRoutes);
+app.use("/api/reviews", ownerReviewRoutes);
 
 async function startServer() {
   try {
