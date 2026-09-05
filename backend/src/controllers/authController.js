@@ -36,7 +36,7 @@ const getOrCreateFirebaseUser = async (phone) => {
 
 export const exchangePhoneEmailToken = async (req, res) => {
   try {
-    const { access_token } = req.body;
+    const { access_token, user_json_url } = req.body;
     const clientId = process.env.PHONE_EMAIL_CLIENT_ID;
 
     if (!clientId) {
@@ -45,30 +45,57 @@ export const exchangePhoneEmailToken = async (req, res) => {
       });
     }
 
-    if (!access_token) {
+    let phone = null;
+
+    if (user_json_url) {
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(user_json_url);
+      } catch {
+        return res.status(400).json({
+          message: "Invalid Phone.Email user URL",
+        });
+      }
+
+      if (
+        parsedUrl.protocol !== "https:" ||
+        parsedUrl.hostname !== "user.phone.email"
+      ) {
+        return res.status(400).json({
+          message: "Invalid Phone.Email user URL",
+        });
+      }
+
+      const jsonResponse = await fetch(parsedUrl.href);
+      const userInfo = await jsonResponse.json();
+      phone = toE164(
+        userInfo.user_country_code || userInfo.country_code,
+        userInfo.user_phone_number || userInfo.phone_no
+      );
+    } else if (access_token) {
+      const form = new FormData();
+      form.append("access_token", access_token);
+      form.append("client_id", clientId);
+
+      const phoneEmailResponse = await fetch(PHONE_EMAIL_USER_URL, {
+        method: "POST",
+        body: form,
+      });
+
+      const payload = await phoneEmailResponse.json();
+
+      if (Number(payload.status) !== 200) {
+        return res.status(401).json({
+          message: "Phone.Email verification failed",
+        });
+      }
+
+      phone = toE164(payload.country_code, payload.phone_no);
+    } else {
       return res.status(400).json({
-        message: "access_token is required",
+        message: "user_json_url or access_token is required",
       });
     }
-
-    const form = new FormData();
-    form.append("access_token", access_token);
-    form.append("client_id", clientId);
-
-    const phoneEmailResponse = await fetch(PHONE_EMAIL_USER_URL, {
-      method: "POST",
-      body: form,
-    });
-
-    const payload = await phoneEmailResponse.json();
-
-    if (Number(payload.status) !== 200) {
-      return res.status(401).json({
-        message: "Phone.Email verification failed",
-      });
-    }
-
-    const phone = toE164(payload.country_code, payload.phone_no);
 
     if (!phone) {
       return res.status(400).json({

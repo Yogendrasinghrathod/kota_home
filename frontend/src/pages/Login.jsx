@@ -8,7 +8,6 @@ import {
 import { useAuth } from "../context/AuthContext.jsx";
 
 const clientId = import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID;
-const PHONE_EMAIL_MESSAGE = "PHONE_EMAIL_TOKEN";
 
 const Login = () => {
   const [error, setError] = useState("");
@@ -16,6 +15,7 @@ const Login = () => {
   const [isOwner, setIsOwner] = useState(false);
   const finishingRef = useRef(false);
   const isOwnerRef = useRef(isOwner);
+  const finishLoginRef = useRef(null);
 
   const { setUser } = useAuth();
   const navigate = useNavigate();
@@ -25,15 +25,18 @@ const Login = () => {
     isOwnerRef.current = isOwner;
   }, [isOwner]);
 
-  const finishLogin = async (accessToken) => {
-    if (!accessToken || finishingRef.current) return;
+  const finishLogin = async ({ accessToken, userJsonUrl }) => {
+    if ((!accessToken && !userJsonUrl) || finishingRef.current) return;
     finishingRef.current = true;
 
     try {
       setError("");
       setLoading(true);
 
-      const { customToken } = await exchangePhoneEmailToken(accessToken);
+      const { customToken } = await exchangePhoneEmailToken({
+        accessToken,
+        userJsonUrl,
+      });
       const firebaseUser = await signInWithPhoneEmail(customToken);
       const idToken = await firebaseUser.getIdToken();
       const role = isOwnerRef.current ? "OWNER" : "STUDENT";
@@ -52,49 +55,48 @@ const Login = () => {
     }
   };
 
+  finishLoginRef.current = finishLogin;
+
   useEffect(() => {
     const accessToken =
       searchParams.get("access_token") || searchParams.get("phtoken");
+    const userJsonUrl = searchParams.get("user_json_url");
 
-    if (!accessToken) return;
-
-    if (window.opener) {
-      window.opener.postMessage(
-        { type: PHONE_EMAIL_MESSAGE, accessToken },
-        window.location.origin
-      );
-      window.close();
+    if (userJsonUrl) {
+      finishLogin({ userJsonUrl });
+      navigate("/login", { replace: true });
       return;
     }
 
-    finishLogin(accessToken);
+    if (!accessToken) return;
+
+    finishLogin({ accessToken });
     navigate("/login", { replace: true });
   }, [searchParams]);
 
   useEffect(() => {
-    const onMessage = (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type !== PHONE_EMAIL_MESSAGE) return;
-      finishLogin(event.data.accessToken);
+    window.phoneEmailListener = (userObj) => {
+      if (!userObj?.user_json_url) return;
+      finishLoginRef.current?.({ userJsonUrl: userObj.user_json_url });
     };
 
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
-
-  const openPhoneEmail = () => {
-    if (!clientId) {
-      setError(
-        "Add VITE_PHONE_EMAIL_CLIENT_ID from https://admin.phone.email"
-      );
-      return;
+    const container = document.getElementById("pe-signin-button");
+    if (!container || container.querySelector("script[data-pe-sdk]")) {
+      return () => {
+        window.phoneEmailListener = undefined;
+      };
     }
 
-    const redirectUrl = `${window.location.origin}${window.location.pathname}`;
-    const authUrl = `https://www.phone.email/auth/log-in?client_id=${clientId}&redirect_url=${redirectUrl}`;
+    const script = document.createElement("script");
+    script.src = "https://www.phone.email/sign_in_button_v1.js";
+    script.async = true;
+    script.dataset.peSdk = "true";
+    container.appendChild(script);
 
-    window.location.assign(authUrl);
-  };
+    return () => {
+      window.phoneEmailListener = undefined;
+    };
+  }, []);
 
   return (
     <div className="min-h-dvh bg-gray-50 flex items-center justify-center">
@@ -149,19 +151,19 @@ const Login = () => {
             <p className="mt-4 text-center text-[9px] text-red-500">{error}</p>
           )}
 
-          <button
-            type="button"
-            onClick={openPhoneEmail}
-            disabled={loading}
-            className="mt-6 flex h-[44px] w-full items-center justify-center gap-2 rounded-md bg-[#02BD7E] text-[12px] font-semibold text-white disabled:opacity-50"
-          >
-            <img
-              src="https://storage.googleapis.com/prod-phoneemail-prof-images/phem-widgets/phem-phone.svg"
-              alt=""
-              className="h-5 w-5"
-            />
-            {loading ? "Signing in..." : "Sign in with Phone"}
-          </button>
+          {loading ? (
+            <p className="mt-6 text-center text-[12px] text-gray-500">
+              Signing in...
+            </p>
+          ) : (
+            <div className="mt-6 flex w-full justify-center">
+              <div
+                id="pe-signin-button"
+                className="pe_signin_button"
+                data-client-id={clientId}
+              />
+            </div>
+          )}
 
           <p className="mt-3 text-center text-[9px] text-gray-400">
             OTP is sent by Phone.Email. Firebase SMS is not used.

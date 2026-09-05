@@ -15,9 +15,10 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-export const exchangePhoneEmailToken = async (accessToken) => {
+export const exchangePhoneEmailToken = async ({ accessToken, userJsonUrl }) => {
   const response = await api.post("/auth/phone-email", {
     access_token: accessToken,
+    user_json_url: userJsonUrl,
   });
   return response.data;
 };
