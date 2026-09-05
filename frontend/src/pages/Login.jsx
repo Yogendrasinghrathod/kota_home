@@ -90,7 +90,9 @@ const Login = () => {
       return;
     }
 
-    const redirectUrl = `${window.location.origin}/login`;
+    const redirectUrl =
+      import.meta.env.VITE_PHONE_EMAIL_REDIRECT_URL ||
+      `${window.location.origin}/login`;
     const authUrl = `https://www.phone.email/auth/log-in?client_id=${encodeURIComponent(
       clientId
     )}&redirect_url=${encodeURIComponent(redirectUrl)}`;
