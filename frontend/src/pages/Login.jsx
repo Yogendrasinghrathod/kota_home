@@ -90,10 +90,15 @@ const Login = () => {
       return;
     }
 
-    const redirectUrl =
-      import.meta.env.VITE_PHONE_EMAIL_REDIRECT_URL ||
-      `${window.location.origin}/login`;
-    const authUrl = `https://www.phone.email/auth/log-in?client_id=${encodeURIComponent(
+    const isLocal =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    const redirectUrl = isLocal
+      ? `${window.location.origin}/login`
+      : "https://kotaroom.online/login";
+
+    const authUrl = `https://auth.phone.email/log-in?client_id=${encodeURIComponent(
       clientId
     )}&redirect_url=${encodeURIComponent(redirectUrl)}`;
 
