@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getStudentFeed } from "../config/services/propertyService.js";
+import { cacheKeys, peekCache, subscribeCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const FAVORITES_KEY = "kota-home-favorites";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
-  const [listings, setListings] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedFeed = peekCache(cacheKeys.feed());
+  const [listings, setListings] = useState(cachedFeed?.listings || []);
+  const [areas, setAreas] = useState(cachedFeed?.areas || []);
+  const [loading, setLoading] = useState(!cachedFeed);
   const [search, setSearch] = useState("");
   const [selectedArea, setSelectedArea] = useState("ALL");
   const [sort, setSort] = useState("default");
@@ -39,9 +41,11 @@ const StudentDashboard = () => {
     };
 
     fetchFeed();
+    const unsubscribe = subscribeCache(cacheKeys.feed(), fetchFeed);
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

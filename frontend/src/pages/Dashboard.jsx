@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import StudentDashboard from "./StudentDashboard.jsx";
 import { getProperties } from "../config/services/propertyService.js";
 import { getOwnerReviews } from "../config/services/reviewService.js";
+import { cacheKeys, peekCache, subscribeCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const Dashboard = () => {
@@ -18,9 +19,11 @@ const Dashboard = () => {
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
-  const [properties, setProperties] = useState([]);
-  const [reviewCount, setReviewCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const cachedProperties = peekCache(cacheKeys.properties());
+  const cachedReviews = peekCache(cacheKeys.ownerReviews());
+  const [properties, setProperties] = useState(cachedProperties?.properties || []);
+  const [reviewCount, setReviewCount] = useState(cachedReviews?.count || 0);
+  const [loading, setLoading] = useState(!cachedProperties);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,9 +45,13 @@ const OwnerDashboard = () => {
     };
 
     load();
+    const unsubProperties = subscribeCache(cacheKeys.properties(), load);
+    const unsubReviews = subscribeCache(cacheKeys.ownerReviews(), load);
 
     return () => {
       cancelled = true;
+      unsubProperties();
+      unsubReviews();
     };
   }, []);
 

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getOwnerReviews } from "../config/services/reviewService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 
 const OwnerReviews = () => {
-  const [reviews, setReviews] = useState([]);
-  const [properties, setProperties] = useState([]);
-  const [averageRating, setAverageRating] = useState(0);
+  const cached = peekCache(cacheKeys.ownerReviews());
+  const [reviews, setReviews] = useState(cached?.reviews || []);
+  const [properties, setProperties] = useState(cached?.properties || []);
+  const [averageRating, setAverageRating] = useState(cached?.averageRating || 0);
   const [selectedProperty, setSelectedProperty] = useState("ALL");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
 
   useEffect(() => {

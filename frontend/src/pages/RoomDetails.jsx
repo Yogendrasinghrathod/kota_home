@@ -7,6 +7,7 @@ import { getAmenities, createAmenity } from "../config/services/amenityService.j
 import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 import { getPropertyById } from "../config/services/propertyService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
 import OptimizedImage from "../components/OptimizedImage.jsx";
@@ -15,22 +16,57 @@ const RoomDetails = () => {
     const { user } = useAuth();
     const { propertyId, roomId } = useParams();
 
-    const [room, setRoom] = useState(null);
-    const [property, setProperty] = useState(null);
-    const [amenities, setAmenities] = useState([]);
-    const [allAmenities, setAllAmenities] = useState([]);
+    const [room, setRoom] = useState(
+        () => peekCache(cacheKeys.room(propertyId, roomId))?.room ?? null
+    );
+    const [property, setProperty] = useState(
+        () => peekCache(cacheKeys.property(propertyId))?.property ?? null
+    );
+    const [amenities, setAmenities] = useState(
+        () => peekCache(cacheKeys.roomAmenities(roomId))?.amenities || []
+    );
+    const [allAmenities, setAllAmenities] = useState(
+        () => peekCache(cacheKeys.amenities())?.amenities || []
+    );
     const [newAmenity, setNewAmenity] = useState("");
     const [roomMedia, setRoomMedia] = useState([]);
     const [image, setImage] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [ownerError, setOwnerError] = useState("");
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(
+        () => !peekCache(cacheKeys.room(propertyId, roomId))?.room
+    );
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setRoom(null);
+        const cachedRoom = peekCache(cacheKeys.room(propertyId, roomId));
+        const cachedProperty = peekCache(cacheKeys.property(propertyId));
+        const cachedAmenities = peekCache(cacheKeys.roomAmenities(roomId));
+        const cachedCatalog = peekCache(cacheKeys.amenities());
+        const cachedMedia = peekCache(cacheKeys.media(propertyId));
+
+        if (cachedRoom?.room) {
+            setRoom(cachedRoom.room);
+            setLoading(false);
+        } else {
+            setLoading(true);
+        }
+        if (cachedProperty?.property) setProperty(cachedProperty.property);
+        if (cachedAmenities?.amenities) setAmenities(cachedAmenities.amenities);
+        if (cachedCatalog?.amenities) setAllAmenities(cachedCatalog.amenities);
+        if (cachedMedia?.media) {
+            const items = cachedMedia.media;
+            const forRoom = items.filter(
+                (item) => String(item.room) === String(roomId)
+            );
+            setRoomMedia(forRoom);
+            const roomImage =
+                forRoom.find((item) => item.type === "IMAGE") ||
+                items.find((item) => item.isPrimary && item.type === "IMAGE") ||
+                items.find((item) => item.type === "IMAGE");
+            setImage(roomImage?.url || null);
+        }
 
         const fetchRoomDetails = async () => {
             try {

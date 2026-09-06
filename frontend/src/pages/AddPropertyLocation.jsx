@@ -7,14 +7,18 @@ import {
   searchPlaces,
 } from "../config/services/locationService.js";
 import { getPropertyById } from "../config/services/propertyService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 
 const AddPropertyLocation = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [property, setProperty] = useState(null);
-  const [query, setQuery] = useState("");
+  const cachedLocation = peekCache(cacheKeys.location(id));
+  const [property, setProperty] = useState(
+    () => peekCache(cacheKeys.property(id))?.property ?? null
+  );
+  const [query, setQuery] = useState(cachedLocation?.location?.address || "");
   const [suggestions, setSuggestions] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(cachedLocation?.location || null);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);

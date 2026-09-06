@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProperties, updatePropertyStatus } from "../config/services/propertyService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const Properties = () => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cached = peekCache(cacheKeys.properties());
+  const [properties, setProperties] = useState(cached?.properties || []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
@@ -16,7 +18,6 @@ const Properties = () => {
 
     const fetchProperties = async () => {
       try {
-        setLoading(true);
         setError("");
         const data = await getProperties();
         if (cancelled) return;

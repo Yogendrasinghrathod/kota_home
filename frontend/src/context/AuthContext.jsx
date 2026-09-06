@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { subscribeToAuthState, getCurrentUser } from "../config/services/authService";
+import { cacheKeys, clearCache, setCache } from "../config/queryCache.js";
 
 const AuthContext = createContext(null);
 
@@ -12,6 +13,11 @@ export const AuthProvider = ({ children }) => {
 
   const setUser = useCallback((next) => {
     userRef.current = next;
+    if (next) {
+      setCache(cacheKeys.me(), { user: next });
+    } else {
+      clearCache();
+    }
     setUserState(next);
   }, []);
 

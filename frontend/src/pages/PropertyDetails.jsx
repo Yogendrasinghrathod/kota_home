@@ -7,6 +7,7 @@ import { getMediaByProperty } from "../config/services/mediaService.js";
 import { getRoomAmenities } from "../config/services/roomAmenityService.js";
 import { getLocationByProperty } from "../config/services/locationService.js";
 import { getReviewsByProperty } from "../config/services/reviewService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
 import PropertyMediaCarousel from "../components/PropertyMediaCarousel.jsx";
@@ -18,18 +19,38 @@ const PropertyDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [property, setProperty] = useState(null);
-    const [rooms, setRooms] = useState([]);
-    const [media, setMedia] = useState([]);
-    const [location, setLocation] = useState(null);
-    const [reviews, setReviews] = useState([]);
+    const [property, setProperty] = useState(
+        () => peekCache(cacheKeys.property(id))?.property ?? null
+    );
+    const [rooms, setRooms] = useState(
+        () => peekCache(cacheKeys.rooms(id))?.rooms || []
+    );
+    const [media, setMedia] = useState(
+        () => peekCache(cacheKeys.media(id))?.media || []
+    );
+    const [location, setLocation] = useState(
+        () => peekCache(cacheKeys.location(id))?.location ?? null
+    );
+    const [reviews, setReviews] = useState(
+        () => peekCache(cacheKeys.reviews(id))?.reviews || []
+    );
     const [roomAmenities, setRoomAmenities] = useState({});
 
-    const [loading, setLoading] = useState(true);
-    const [mediaLoading, setMediaLoading] = useState(true);
-    const [roomsLoading, setRoomsLoading] = useState(true);
-    const [locationLoading, setLocationLoading] = useState(true);
-    const [reviewsLoading, setReviewsLoading] = useState(true);
+    const [loading, setLoading] = useState(
+        () => !peekCache(cacheKeys.property(id))?.property
+    );
+    const [mediaLoading, setMediaLoading] = useState(
+        () => !peekCache(cacheKeys.media(id))
+    );
+    const [roomsLoading, setRoomsLoading] = useState(
+        () => !peekCache(cacheKeys.rooms(id))
+    );
+    const [locationLoading, setLocationLoading] = useState(
+        () => !peekCache(cacheKeys.location(id))
+    );
+    const [reviewsLoading, setReviewsLoading] = useState(
+        () => !peekCache(cacheKeys.reviews(id))
+    );
 
     const [error, setError] = useState("");
     const [deleting, setDeleting] = useState(false);
@@ -37,20 +58,23 @@ const PropertyDetails = () => {
     useEffect(() => {
         let cancelled = false;
 
-        setLoading(true);
-        setMediaLoading(true);
-        setRoomsLoading(true);
-        setLocationLoading(true);
-        setReviewsLoading(true);
+        const cachedProperty = peekCache(cacheKeys.property(id));
+        const cachedRooms = peekCache(cacheKeys.rooms(id));
+        const cachedMedia = peekCache(cacheKeys.media(id));
+        const cachedLocation = peekCache(cacheKeys.location(id));
+        const cachedReviews = peekCache(cacheKeys.reviews(id));
+
         setError("");
-        setProperty((current) => (current == null ? current : null));
-        setRooms((current) => (current.length === 0 ? current : []));
-        setMedia((current) => (current.length === 0 ? current : []));
-        setLocation((current) => (current == null ? current : null));
-        setReviews((current) => (current.length === 0 ? current : []));
-        setRoomAmenities((current) =>
-            Object.keys(current).length === 0 ? current : {}
-        );
+        setProperty(cachedProperty?.property ?? null);
+        setRooms(cachedRooms?.rooms || []);
+        setMedia(cachedMedia?.media || []);
+        setLocation(cachedLocation?.location ?? null);
+        setReviews(cachedReviews?.reviews || []);
+        setLoading(!cachedProperty?.property);
+        setRoomsLoading(!cachedRooms);
+        setMediaLoading(!cachedMedia);
+        setLocationLoading(!cachedLocation);
+        setReviewsLoading(!cachedReviews);
 
         const load = async (request, onSuccess, onError) => {
             try {

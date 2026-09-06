@@ -5,6 +5,7 @@ import { getAmenities, createAmenity } from "../config/services/amenityService.j
 import { addAmenityToRoom, getRoomAmenities } from "../config/services/roomAmenityService.js";
 import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const AddRoom = () => {
@@ -20,7 +21,9 @@ const AddRoom = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [allAmenities, setAllAmenities] = useState([]);
+  const [allAmenities, setAllAmenities] = useState(
+    () => peekCache(cacheKeys.amenities())?.amenities || []
+  );
   const [roomAmenities, setRoomAmenities] = useState([]);
   const [newAmenity, setNewAmenity] = useState("");
   const [media, setMedia] = useState([]);

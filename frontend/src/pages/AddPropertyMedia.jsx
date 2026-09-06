@@ -3,13 +3,18 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
 import { getPropertyById } from "../config/services/propertyService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const AddPropertyMedia = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [property, setProperty] = useState(null);
-  const [media, setMedia] = useState([]);
+  const [property, setProperty] = useState(
+    () => peekCache(cacheKeys.property(id))?.property ?? null
+  );
+  const [media, setMedia] = useState(
+    () => peekCache(cacheKeys.media(id))?.media || []
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 

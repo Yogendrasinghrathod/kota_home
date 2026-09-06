@@ -1,17 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMediaByProperty } from "../config/services/mediaService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const RoomPhotos = () => {
   const { propertyId } = useParams();
 
-  const [media, setMedia] = useState([]);
+  const cached = peekCache(cacheKeys.media(propertyId));
+  const [media, setMedia] = useState(cached?.media || []);
   const [activeTab, setActiveTab] = useState("ALL");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
     let cancelled = false;
+    const hit = peekCache(cacheKeys.media(propertyId));
+    if (hit?.media) {
+      setMedia(hit.media);
+      setLoading(false);
+    }
 
     const fetchMedia = async () => {
       try {

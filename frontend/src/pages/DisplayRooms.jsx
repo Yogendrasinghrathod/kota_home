@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { getRoomsByProperty } from "../config/services/roomService.js";
 import { getMediaByProperty } from "../config/services/mediaService.js";
+import { cacheKeys, peekCache } from "../config/queryCache.js";
 import RoomCard from "../components/RoomCard.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -11,12 +12,19 @@ const DisplayRooms = () => {
     const { user } = useAuth();
     const isOwner = user?.role === "OWNER" || user?.role === "ADMIN";
 
-    const [rooms, setRooms] = useState([]);
-    const [media, setMedia] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const cachedRooms = peekCache(cacheKeys.rooms(propertyId));
+    const cachedMedia = peekCache(cacheKeys.media(propertyId));
+    const [rooms, setRooms] = useState(cachedRooms?.rooms || []);
+    const [media, setMedia] = useState(cachedMedia?.media || []);
+    const [loading, setLoading] = useState(!cachedRooms);
 
     useEffect(() => {
         let cancelled = false;
+        const roomsHit = peekCache(cacheKeys.rooms(propertyId));
+        const mediaHit = peekCache(cacheKeys.media(propertyId));
+        if (roomsHit?.rooms) setRooms(roomsHit.rooms);
+        if (mediaHit?.media) setMedia(mediaHit.media);
+        setLoading(!roomsHit);
 
         const load = async () => {
             try {
