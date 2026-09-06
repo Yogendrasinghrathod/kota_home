@@ -5,6 +5,7 @@ import { getAmenities, createAmenity } from "../config/services/amenityService.j
 import { addAmenityToRoom, getRoomAmenities } from "../config/services/roomAmenityService.js";
 import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
 import { uploadToCloudinary } from "../config/cloudinary.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const AddRoom = () => {
   const { propertyId } = useParams();
@@ -26,16 +27,22 @@ const AddRoom = () => {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadAmenities = async () => {
       try {
         const data = await getAmenities();
-        setAllAmenities(data.amenities || []);
+        if (!cancelled) setAllAmenities(data.amenities || []);
       } catch (err) {
         console.error(err);
       }
     };
 
     loadAmenities();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadRoomExtras = async (id) => {
@@ -274,9 +281,9 @@ const AddRoom = () => {
                 {media.map((item) => (
                   <div key={item._id} className="overflow-hidden rounded-xl bg-gray-100">
                     {item.type === "VIDEO" ? (
-                      <video src={item.url} className="h-28 w-full object-cover" controls />
+                      <video src={item.url} className="h-28 w-full object-cover" controls preload="metadata" />
                     ) : (
-                      <img src={item.url} alt="" className="h-28 w-full object-cover" />
+                      <OptimizedImage src={item.url} alt="" width={360} className="h-28 w-full object-cover" />
                     )}
                   </div>
                 ))}

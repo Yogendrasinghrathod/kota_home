@@ -21,25 +21,42 @@ const AddPropertyLocation = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
-        const propertyData = await getPropertyById(id);
-        setProperty(propertyData.property);
-        try {
-          const locationData = await getLocationByProperty(id);
-          if (locationData.location) {
-            setSelected(locationData.location);
-            setQuery(locationData.location.address);
-          }
-        } catch {
-          // no location yet
+        const [propertyResult, locationResult] = await Promise.allSettled([
+          getPropertyById(id),
+          getLocationByProperty(id),
+        ]);
+
+        if (cancelled) return;
+
+        if (propertyResult.status === "fulfilled") {
+          setProperty(propertyResult.value.property);
+        } else {
+          setError(
+            propertyResult.reason?.response?.data?.message ||
+              "Failed to load property"
+          );
+        }
+
+        if (locationResult.status === "fulfilled" && locationResult.value.location) {
+          setSelected(locationResult.value.location);
+          setQuery(locationResult.value.location.address);
         }
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load property");
+        if (!cancelled) {
+          setError(err.response?.data?.message || "Failed to load property");
+        }
       }
     };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const handleSearch = async () => {

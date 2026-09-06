@@ -21,9 +21,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    isOwnerRef.current = isOwner;
-  }, [isOwner]);
+  isOwnerRef.current = isOwner;
 
   const finishLogin = async ({ accessToken, userJsonUrl }) => {
     if ((!accessToken && !userJsonUrl) || finishingRef.current) return;
@@ -62,17 +60,11 @@ const Login = () => {
       searchParams.get("access_token") || searchParams.get("phtoken");
     const userJsonUrl = searchParams.get("user_json_url");
 
-    if (userJsonUrl) {
-      finishLogin({ userJsonUrl });
-      navigate("/login", { replace: true });
-      return;
-    }
+    if (!accessToken && !userJsonUrl) return;
 
-    if (!accessToken) return;
-
-    finishLogin({ accessToken });
+    finishLogin({ accessToken, userJsonUrl });
     navigate("/login", { replace: true });
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     window.phoneEmailListener = (userObj) => {

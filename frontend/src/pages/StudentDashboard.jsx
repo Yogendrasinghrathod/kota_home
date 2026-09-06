@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getStudentFeed } from "../config/services/propertyService.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const FAVORITES_KEY = "kota-home-favorites";
 
@@ -22,24 +23,27 @@ const StudentDashboard = () => {
   });
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchFeed = async () => {
       try {
         const data = await getStudentFeed();
+        if (cancelled) return;
         setListings(data.listings || []);
         setAreas(data.areas || []);
       } catch (error) {
         console.error("Failed to load student feed:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchFeed();
-  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-  }, [favorites]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredListings = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -69,11 +73,13 @@ const StudentDashboard = () => {
   const avatarLetter = (user?.name || "S").trim().charAt(0).toUpperCase();
 
   const toggleFavorite = (propertyId) => {
-    setFavorites((current) =>
-      current.includes(propertyId)
+    setFavorites((current) => {
+      const next = current.includes(propertyId)
         ? current.filter((id) => id !== propertyId)
-        : [...current, propertyId]
-    );
+        : [...current, propertyId];
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   const cycleSort = () => {
@@ -177,9 +183,10 @@ const StudentDashboard = () => {
                   >
                     <div className="h-[78px] w-full overflow-hidden rounded-xl bg-gray-100">
                       {item.image ? (
-                        <img
+                        <OptimizedImage
                           src={item.image}
                           alt={item.area}
+                          width={240}
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -226,7 +233,7 @@ const StudentDashboard = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredListings.map((listing) => {
+                {filteredListings.map((listing, index) => {
                   const isFavorite = favorites.includes(listing.propertyId);
 
                   return (
@@ -237,9 +244,11 @@ const StudentDashboard = () => {
                     >
                       <div className="h-[92px] w-[92px] shrink-0 overflow-hidden rounded-xl bg-gray-100">
                         {listing.image ? (
-                          <img
+                          <OptimizedImage
                             src={listing.image}
                             alt={listing.name}
+                            width={280}
+                            eager={index < 2}
                             className="h-full w-full object-cover"
                           />
                         ) : (

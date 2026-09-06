@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { uploadToCloudinary } from "../config/cloudinary.js";
 import { createMedia, getMediaByProperty } from "../config/services/mediaService.js";
 import { getPropertyById } from "../config/services/propertyService.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const AddPropertyMedia = () => {
   const { id } = useParams();
@@ -18,17 +19,41 @@ const AddPropertyMedia = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
-        const propertyData = await getPropertyById(id);
-        setProperty(propertyData.property);
-        await loadMedia();
+        const [propertyResult, mediaResult] = await Promise.allSettled([
+          getPropertyById(id),
+          getMediaByProperty(id),
+        ]);
+
+        if (cancelled) return;
+
+        if (propertyResult.status === "fulfilled") {
+          setProperty(propertyResult.value.property);
+        } else {
+          setError(
+            propertyResult.reason?.response?.data?.message ||
+              "Failed to load property"
+          );
+        }
+
+        if (mediaResult.status === "fulfilled") {
+          setMedia(mediaResult.value.media || []);
+        }
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load property");
+        if (!cancelled) {
+          setError(err.response?.data?.message || "Failed to load property");
+        }
       }
     };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const handleFiles = async (event) => {
@@ -99,9 +124,9 @@ const AddPropertyMedia = () => {
           {media.map((item) => (
             <div key={item._id} className="overflow-hidden rounded-xl bg-white shadow-sm">
               {item.type === "VIDEO" ? (
-                <video src={item.url} className="h-32 w-full object-cover" controls />
+                <video src={item.url} className="h-32 w-full object-cover" controls preload="metadata" />
               ) : (
-                <img src={item.url} alt="" className="h-32 w-full object-cover" />
+                <OptimizedImage src={item.url} alt="" width={360} className="h-32 w-full object-cover" />
               )}
               <p className="px-2 py-1.5 text-[10px] font-medium text-gray-500">
                 {item.type}

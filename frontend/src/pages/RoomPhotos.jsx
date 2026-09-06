@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMediaByProperty } from "../config/services/mediaService.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const RoomPhotos = () => {
   const { propertyId } = useParams();
@@ -10,22 +11,28 @@ const RoomPhotos = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchMedia = async () => {
       try {
         const data = await getMediaByProperty(propertyId);
-        setMedia(data.media || []);
+        if (!cancelled) setMedia(data.media || []);
       } catch (error) {
         console.error(
           "ROOM PHOTOS ERROR:",
           error.response?.data || error.message
         );
-        setMedia([]);
+        if (!cancelled) setMedia([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchMedia();
+
+    return () => {
+      cancelled = true;
+    };
   }, [propertyId]);
 
   const filteredMedia = useMemo(() => {
@@ -113,9 +120,10 @@ const RoomPhotos = () => {
                 className="relative aspect-square overflow-hidden rounded-lg bg-gray-200"
               >
                 {item.type === "IMAGE" ? (
-                  <img
+                  <OptimizedImage
                     src={item.url}
                     alt="Room"
+                    width={480}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -124,6 +132,7 @@ const RoomPhotos = () => {
                     className="h-full w-full object-cover"
                     muted
                     playsInline
+                    preload="metadata"
                   />
                 )}
 

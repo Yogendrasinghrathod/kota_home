@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getProperties, updatePropertyStatus } from "../config/services/propertyService.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const Properties = () => {
   const [properties, setProperties] = useState([]);
@@ -10,26 +11,30 @@ const Properties = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const location = useLocation();
-
   useEffect(() => {
+    let cancelled = false;
+
     const fetchProperties = async () => {
       try {
         setLoading(true);
         setError("");
         const data = await getProperties();
-
+        if (cancelled) return;
         setProperties(data.properties || []);
       } catch (error) {
         console.error("Failed to fetch properties:", error);
-        setError("Failed to load properties");
+        if (!cancelled) setError("Failed to load properties");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchProperties();
-  }, [location.key]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -46,14 +51,6 @@ const Properties = () => {
       return matchesSearch && matchesStatus;
     });
   }, [properties, search, statusFilter]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading properties...</p>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -161,7 +158,9 @@ const Properties = () => {
         </div>
 
         {/* Results */}
-        {filteredProperties.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading properties...</p>
+        ) : filteredProperties.length === 0 ? (
           <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
 
             <p className="text-gray-500">
@@ -206,9 +205,10 @@ const Properties = () => {
                   <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
 
                     {property.image ? (
-                      <img
+                      <OptimizedImage
                         src={property.image}
                         alt={property.name}
+                        width={240}
                         className="h-full w-full object-cover"
                       />
                     ) : (

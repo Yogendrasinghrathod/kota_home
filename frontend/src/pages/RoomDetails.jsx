@@ -9,6 +9,7 @@ import { uploadToCloudinary } from "../config/cloudinary.js";
 import { getPropertyById } from "../config/services/propertyService.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const RoomDetails = () => {
     const { user } = useAuth();
@@ -27,38 +28,52 @@ const RoomDetails = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setRoom(null);
+
         const fetchRoomDetails = async () => {
             try {
-                // Room
-                const roomData = await getRoomById(propertyId, roomId);
-                setRoom(roomData.room);
+                const extrasPromise = Promise.allSettled([
+                    getPropertyById(propertyId),
+                    getRoomAmenities(roomId),
+                    getMediaByProperty(propertyId),
+                    getAmenities(),
+                ]);
 
-                try {
-                    const propertyData = await getPropertyById(propertyId);
-                    setProperty(propertyData.property);
-                } catch (error) {
+                const roomData = await getRoomById(propertyId, roomId);
+                if (cancelled) return;
+                setRoom(roomData.room);
+                setLoading(false);
+
+                const [propertyResult, amenityResult, mediaResult, catalogResult] =
+                    await extrasPromise;
+
+                if (cancelled) return;
+
+                if (propertyResult.status === "fulfilled") {
+                    setProperty(propertyResult.value.property);
+                } else {
                     console.error(
                         "PROPERTY ERROR:",
-                        error.response?.data || error.message
+                        propertyResult.reason?.response?.data ||
+                            propertyResult.reason?.message
                     );
                 }
 
-                // Room Amenities
-                try {
-                    const amenityData = await getRoomAmenities(roomId);
-                    setAmenities(amenityData.amenities || []);
-                } catch (error) {
+                if (amenityResult.status === "fulfilled") {
+                    setAmenities(amenityResult.value.amenities || []);
+                } else {
                     console.error(
                         "ROOM AMENITIES ERROR:",
-                        error.response?.data || error.message
+                        amenityResult.reason?.response?.data ||
+                            amenityResult.reason?.message
                     );
                     setAmenities([]);
                 }
 
-                // Property Media
-                try {
-                    const mediaData = await getMediaByProperty(propertyId);
-                    const items = mediaData.media || [];
+                if (mediaResult.status === "fulfilled") {
+                    const items = mediaResult.value.media || [];
                     const forRoom = items.filter(
                         (item) => String(item.room) === String(roomId)
                     );
@@ -73,17 +88,17 @@ const RoomDetails = () => {
                         items.find((item) => item.type === "IMAGE");
 
                     setImage(roomImage?.url || null);
-                } catch (error) {
+                } else {
                     console.error(
                         "ROOM IMAGE ERROR:",
-                        error.response?.data || error.message
+                        mediaResult.reason?.response?.data ||
+                            mediaResult.reason?.message
                     );
                 }
 
-                try {
-                    const catalog = await getAmenities();
-                    setAllAmenities(catalog.amenities || []);
-                } catch {
+                if (catalogResult.status === "fulfilled") {
+                    setAllAmenities(catalogResult.value.amenities || []);
+                } else {
                     setAllAmenities([]);
                 }
             } catch (error) {
@@ -91,12 +106,15 @@ const RoomDetails = () => {
                     "ROOM DETAILS ERROR:",
                     error.response?.data || error.message
                 );
-            } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchRoomDetails();
+
+        return () => {
+            cancelled = true;
+        };
     }, [propertyId, roomId]);
 
     const getRoomTitle = (sharing) => {
@@ -250,9 +268,11 @@ const RoomDetails = () => {
                 <div className="relative h-64 w-full overflow-hidden bg-gray-200">
 
                     {image ? (
-                        <img
+                        <OptimizedImage
                             src={image}
                             alt={getRoomTitle(room.sharing)}
+                            width={900}
+                            eager
                             className="h-full w-full object-cover"
                         />
                     ) : (
@@ -436,9 +456,14 @@ const RoomDetails = () => {
                                 {roomMedia.map((item) => (
                                     <div key={item._id} className="overflow-hidden rounded-lg bg-gray-100">
                                         {item.type === "VIDEO" ? (
-                                            <video src={item.url} className="h-20 w-full object-cover" />
+                                            <video src={item.url} preload="none" className="h-20 w-full object-cover" />
                                         ) : (
-                                            <img src={item.url} alt="" className="h-20 w-full object-cover" />
+                                            <OptimizedImage
+                                                src={item.url}
+                                                alt=""
+                                                width={240}
+                                                className="h-20 w-full object-cover"
+                                            />
                                         )}
                                     </div>
                                 ))}

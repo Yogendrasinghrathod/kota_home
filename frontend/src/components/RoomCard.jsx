@@ -1,4 +1,6 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
+import OptimizedImage from "./OptimizedImage.jsx";
 
 const RoomCard = ({ room, image }) => {
     const roomTitle =
@@ -18,9 +20,10 @@ const RoomCard = ({ room, image }) => {
             {/* IMAGE */}
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                 {image ? (
-                    <img
+                    <OptimizedImage
                         src={image}
                         alt={roomTitle}
+                        width={200}
                         className="h-full w-full object-cover"
                     />
                 ) : (
@@ -57,4 +60,4 @@ const RoomCard = ({ room, image }) => {
     );
 };
 
-export default RoomCard;
+export default memo(RoomCard);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { subscribeToAuthState, getCurrentUser } from "../config/services/authService";
 
@@ -9,37 +9,47 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const unsubscribe = subscribeToAuthState(async (firebaseUser) => {
       if (!firebaseUser) {
-        setUser(null);
-        setLoading(false);
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
         return;
       }
 
       try {
         const data = await getCurrentUser();
-        setUser(data.user);
+        if (!cancelled) setUser(data.user);
       } catch (error) {
         if (error.response?.status !== 404) {
           console.error("Auth initialization error:", error);
-          setUser(null);
+          if (!cancelled) setUser(null);
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
+  const value = useMemo(
+    () => ({
+      user,
+      setUser,
+      loading,
+    }),
+    [user, loading]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        loading,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

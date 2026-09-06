@@ -20,7 +20,8 @@ const Profile = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setName(user?.name || "");
+    const next = user?.name || "";
+    setName((current) => (current === next ? current : next));
   }, [user?.name]);
 
   const isStudent = user?.role === "STUDENT";

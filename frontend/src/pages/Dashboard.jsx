@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import StudentDashboard from "./StudentDashboard.jsx";
 import { getProperties } from "../config/services/propertyService.js";
 import { getOwnerReviews } from "../config/services/reviewService.js";
+import OptimizedImage from "../components/OptimizedImage.jsx";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -22,22 +23,29 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       try {
         const [propertyData, reviewData] = await Promise.all([
           getProperties(),
           getOwnerReviews(),
         ]);
+        if (cancelled) return;
         setProperties(propertyData.properties || []);
         setReviewCount(reviewData.count || 0);
       } catch (error) {
         console.error("Failed to load owner dashboard:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const totalRooms = useMemo(
@@ -250,9 +258,11 @@ const OwnerDashboard = () => {
                   >
                     <div className="h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       {property.image ? (
-                        <img
+                        <OptimizedImage
                           src={property.image}
                           alt={property.name}
+                          width={200}
+                          eager
                           className="h-full w-full object-cover"
                         />
                       ) : (

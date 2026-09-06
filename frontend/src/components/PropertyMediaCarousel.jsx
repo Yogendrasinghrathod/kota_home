@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import OptimizedImage from "./OptimizedImage.jsx";
 
 const PropertyMediaCarousel = ({ media = [], alt = "Property" }) => {
   const scrollerRef = useRef(null);
@@ -45,22 +46,24 @@ const PropertyMediaCarousel = ({ media = [], alt = "Property" }) => {
         className="flex h-60 snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        {slides.map((item) => (
+        {slides.map((item, slideIndex) => (
           <div
             key={item._id || item.url}
             className="h-60 w-full min-w-full shrink-0 snap-center"
           >
             {item.type === "IMAGE" ? (
-              <img
+              <OptimizedImage
                 src={item.url}
                 alt={alt}
-                draggable={false}
+                width={900}
+                eager={slideIndex === 0}
                 className="h-60 w-full object-cover"
               />
             ) : (
               <video
                 src={item.url}
                 controls
+                preload="none"
                 className="h-60 w-full object-cover"
               />
             )}

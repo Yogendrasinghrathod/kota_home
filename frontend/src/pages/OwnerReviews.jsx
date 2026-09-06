@@ -11,20 +11,29 @@ const OwnerReviews = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchReviews = async () => {
       try {
         const data = await getOwnerReviews();
+        if (cancelled) return;
         setReviews(data.reviews || []);
         setProperties(data.properties || []);
         setAverageRating(data.averageRating || 0);
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load reviews");
+        if (!cancelled) {
+          setError(err.response?.data?.message || "Failed to load reviews");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchReviews();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filteredReviews = useMemo(() => {

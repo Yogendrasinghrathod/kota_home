@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getPropertyById, updatePropertyStatus, deleteProperty } from "../config/services/propertyService.js";
@@ -9,8 +9,9 @@ import { getLocationByProperty } from "../config/services/locationService.js";
 import { getReviewsByProperty } from "../config/services/reviewService.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import ContactOwnerButton from "../components/ContactOwnerButton.jsx";
-import PropertyMap from "../components/PropertyMap.jsx";
 import PropertyMediaCarousel from "../components/PropertyMediaCarousel.jsx";
+
+const PropertyMap = lazy(() => import("../components/PropertyMap.jsx"));
 
 const PropertyDetails = () => {
     const { user } = useAuth();
@@ -33,153 +34,149 @@ const PropertyDetails = () => {
     const [error, setError] = useState("");
     const [deleting, setDeleting] = useState(false);
 
-    // =========================
-    // PROPERTY
-    // =========================
-
     useEffect(() => {
-        const fetchProperty = async () => {
+        let cancelled = false;
+
+        setLoading(true);
+        setMediaLoading(true);
+        setRoomsLoading(true);
+        setLocationLoading(true);
+        setReviewsLoading(true);
+        setError("");
+        setProperty((current) => (current == null ? current : null));
+        setRooms((current) => (current.length === 0 ? current : []));
+        setMedia((current) => (current.length === 0 ? current : []));
+        setLocation((current) => (current == null ? current : null));
+        setReviews((current) => (current.length === 0 ? current : []));
+        setRoomAmenities((current) =>
+            Object.keys(current).length === 0 ? current : {}
+        );
+
+        const load = async (request, onSuccess, onError) => {
             try {
-                const data = await getPropertyById(id);
-                setProperty(data.property);
+                const data = await request();
+                if (!cancelled) onSuccess(data);
             } catch (error) {
-                console.error("PROPERTY ERROR:", error);
-                setError("Failed to load property");
-            } finally {
-                setLoading(false);
+                if (!cancelled) onError(error);
             }
         };
 
-        fetchProperty();
-    }, [id]);
+        load(
+            () => getPropertyById(id),
+            (data) => {
+                setProperty(data.property);
+                setLoading(false);
+            },
+            (error) => {
+                console.error("PROPERTY ERROR:", error);
+                setError("Failed to load property");
+                setLoading(false);
+            }
+        );
 
-    // =========================
-    // ROOMS
-    // =========================
-
-    useEffect(() => {
-        const fetchRooms = async () => {
-            try {
-                const data = await getRoomsByProperty(id);
+        load(
+            () => getRoomsByProperty(id),
+            (data) => {
                 setRooms(data.rooms || []);
-            } catch (error) {
+                setRoomsLoading(false);
+            },
+            (error) => {
                 console.error(
                     "ROOM ERROR:",
                     error.response?.data || error.message
                 );
                 setRooms([]);
-            } finally {
                 setRoomsLoading(false);
             }
-        };
+        );
 
-        fetchRooms();
-    }, [id]);
-
-    // =========================
-    // MEDIA
-    // =========================
-
-    useEffect(() => {
-        const fetchMedia = async () => {
-            try {
-                const data = await getMediaByProperty(id);
+        load(
+            () => getMediaByProperty(id),
+            (data) => {
                 setMedia(data.media || []);
-            } catch (error) {
+                setMediaLoading(false);
+            },
+            (error) => {
                 console.error(
                     "MEDIA ERROR:",
                     error.response?.data || error.message
                 );
                 setMedia([]);
-            } finally {
                 setMediaLoading(false);
             }
-        };
+        );
 
-        fetchMedia();
-    }, [id]);
-
-    // =========================
-    // LOCATION
-    // =========================
-
-    useEffect(() => {
-        const fetchLocation = async () => {
-            try {
-                const data = await getLocationByProperty(id);
+        load(
+            () => getLocationByProperty(id),
+            (data) => {
                 setLocation(data.location);
-            } catch (error) {
-                // console.error(
-                //     "LOCATION ERROR:",
-                //     error.response?.data || error.message
-                // );
+                setLocationLoading(false);
+            },
+            () => {
                 setLocation(null);
-            } finally {
                 setLocationLoading(false);
             }
-        };
+        );
 
-        fetchLocation();
-    }, [id]);
-
-    // =========================
-    // REVIEWS
-    // =========================
-
-    useEffect(() => {
-        const fetchReviews = async () => {
-            try {
-                const data = await getReviewsByProperty(id);
+        load(
+            () => getReviewsByProperty(id),
+            (data) => {
                 setReviews(data.reviews || []);
-            } catch (error) {
+                setReviewsLoading(false);
+            },
+            (error) => {
                 console.error(
                     "REVIEWS ERROR:",
                     error.response?.data || error.message
                 );
                 setReviews([]);
-            } finally {
                 setReviewsLoading(false);
             }
-        };
+        );
 
-        fetchReviews();
+        return () => {
+            cancelled = true;
+        };
     }, [id]);
 
-    // =========================
-    // ROOM AMENITIES
-    // =========================
+    const roomIdsKey = useMemo(
+        () => rooms.map((room) => room._id).join(","),
+        [rooms]
+    );
 
     useEffect(() => {
-        if (rooms.length === 0) {
-            setRoomAmenities({});
-            return;
-        }
+        if (!roomIdsKey) return undefined;
+
+        let cancelled = false;
+        const ids = roomIdsKey.split(",");
 
         const fetchAmenities = async () => {
-            const amenitiesMap = {};
-
-            await Promise.all(
-                rooms.map(async (room) => {
+            const entries = await Promise.all(
+                ids.map(async (roomId) => {
                     try {
-                        const data = await getRoomAmenities(room._id);
-
-                        amenitiesMap[room._id] = data.amenities || [];
+                        const data = await getRoomAmenities(roomId);
+                        return [roomId, data.amenities || []];
                     } catch (error) {
                         console.error(
-                            `AMENITY ERROR ${room._id}:`,
+                            `AMENITY ERROR ${roomId}:`,
                             error.response?.data || error.message
                         );
-
-                        amenitiesMap[room._id] = [];
+                        return [roomId, []];
                     }
                 })
             );
 
-            setRoomAmenities(amenitiesMap);
+            if (!cancelled) {
+                setRoomAmenities(Object.fromEntries(entries));
+            }
         };
 
         fetchAmenities();
-    }, [rooms]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [roomIdsKey]);
 
     // =========================
     // DERIVED DATA
@@ -579,11 +576,21 @@ const PropertyDetails = () => {
                                     {location.address}
                                 </p>
                             )}
-                            <PropertyMap
-                                latitude={location.latitude}
-                                longitude={location.longitude}
-                                propertyName={property.name}
-                            />
+                            <Suspense
+                                fallback={
+                                    <div className="mt-4 flex h-64 items-center justify-center rounded-xl bg-gray-100">
+                                        <p className="text-sm text-gray-500">
+                                            Loading map...
+                                        </p>
+                                    </div>
+                                }
+                            >
+                                <PropertyMap
+                                    latitude={location.latitude}
+                                    longitude={location.longitude}
+                                    propertyName={property.name}
+                                />
+                            </Suspense>
                         </>
                     ) : (
                         <p className="text-sm text-gray-400">

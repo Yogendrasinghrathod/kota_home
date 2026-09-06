@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { getRoomsByProperty } from "../config/services/roomService.js";
@@ -16,44 +16,67 @@ const DisplayRooms = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchRooms = async () => {
+        let cancelled = false;
+
+        const load = async () => {
             try {
-                const data = await getRoomsByProperty(propertyId);
-                setRooms(data.rooms || []);
-            } catch (error) {
-                console.error(
-                    "ROOMS ERROR:",
-                    error.response?.data || error.message
-                );
+                const [roomsResult, mediaResult] = await Promise.allSettled([
+                    getRoomsByProperty(propertyId),
+                    getMediaByProperty(propertyId),
+                ]);
+
+                if (cancelled) return;
+
+                if (roomsResult.status === "fulfilled") {
+                    setRooms(roomsResult.value.rooms || []);
+                } else {
+                    console.error(
+                        "ROOMS ERROR:",
+                        roomsResult.reason?.response?.data ||
+                            roomsResult.reason?.message
+                    );
+                }
+
+                if (mediaResult.status === "fulfilled") {
+                    setMedia(mediaResult.value.media || []);
+                } else {
+                    console.error(
+                        "MEDIA ERROR:",
+                        mediaResult.reason?.response?.data ||
+                            mediaResult.reason?.message
+                    );
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
-        fetchRooms();
-    }, [propertyId]);
+        load();
 
-    useEffect(() => {
-        const fetchMedia = async () => {
-            try {
-                const data = await getMediaByProperty(propertyId);
-                setMedia(data.media || []);
-            } catch (error) {
-                console.error(
-                    "MEDIA ERROR:",
-                    error.response?.data || error.message
-                );
-            }
+        return () => {
+            cancelled = true;
         };
-
-        fetchMedia();
     }, [propertyId]);
 
-    const primaryImage =
-        media.find(
-            (item) => item.isPrimary && item.type === "IMAGE"
-        ) ||
-        media.find((item) => item.type === "IMAGE");
+    const { imageByRoom, primaryImage } = useMemo(() => {
+        const imageByRoom = new Map();
+        let primaryImage = null;
+
+        for (const item of media) {
+            if (item.type !== "IMAGE") continue;
+            if (!primaryImage && item.isPrimary) primaryImage = item;
+            if (item.room) {
+                const key = String(item.room);
+                if (!imageByRoom.has(key)) imageByRoom.set(key, item);
+            }
+        }
+
+        if (!primaryImage) {
+            primaryImage = media.find((item) => item.type === "IMAGE") || null;
+        }
+
+        return { imageByRoom, primaryImage };
+    }, [media]);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -113,11 +136,7 @@ const DisplayRooms = () => {
 
                         {rooms.map((room) => {
                             const roomImage =
-                                media.find(
-                                    (item) =>
-                                        String(item.room) === String(room._id) &&
-                                        item.type === "IMAGE"
-                                ) || primaryImage;
+                                imageByRoom.get(String(room._id)) || primaryImage;
 
                             return (
                             <RoomCard
