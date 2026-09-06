@@ -10,6 +10,29 @@ const toE164 = (countryCode, phoneNo) => {
   return `+${cc}${num}`;
 };
 
+const upsertAppUser = async ({ uid, phone, role }) => {
+  let user = await User.findOne({ firebaseUid: uid });
+
+  if (!user && phone) {
+    user = await User.findOne({ phone });
+
+    if (user) {
+      user.firebaseUid = uid;
+      await user.save();
+    }
+  }
+
+  if (!user) {
+    user = await User.create({
+      firebaseUid: uid,
+      phone,
+      role: role || "STUDENT",
+    });
+  }
+
+  return user;
+};
+
 const getOrCreateFirebaseUser = async (phone) => {
   try {
     const existing = await firebaseAuth.getUserByPhoneNumber(phone);
@@ -36,7 +59,7 @@ const getOrCreateFirebaseUser = async (phone) => {
 
 export const exchangePhoneEmailToken = async (req, res) => {
   try {
-    const { access_token, user_json_url } = req.body;
+    const { access_token, user_json_url, role } = req.body;
     const clientId = process.env.PHONE_EMAIL_CLIENT_ID;
 
     if (!clientId) {
@@ -104,11 +127,19 @@ export const exchangePhoneEmailToken = async (req, res) => {
     }
 
     const uid = await getOrCreateFirebaseUser(phone);
-    const customToken = await firebaseAuth.createCustomToken(uid);
+    const [customToken, user] = await Promise.all([
+      firebaseAuth.createCustomToken(uid),
+      upsertAppUser({
+        uid,
+        phone,
+        role: role === "OWNER" ? "OWNER" : "STUDENT",
+      }),
+    ]);
 
     return res.status(200).json({
       customToken,
       phone,
+      user,
     });
   } catch (error) {
     console.error("Phone.Email exchange error:", error.message);
@@ -124,26 +155,11 @@ export const loginUser = async (req, res) => {
     const { uid, phone_number } = req.user;
     const { role } = req.body;
 
-    let user = await User.findOne({
-      firebaseUid: uid,
+    const user = await upsertAppUser({
+      uid,
+      phone: phone_number,
+      role,
     });
-
-    if (!user && phone_number) {
-      user = await User.findOne({ phone: phone_number });
-
-      if (user) {
-        user.firebaseUid = uid;
-        await user.save();
-      }
-    }
-
-    if (!user) {
-      user = await User.create({
-        firebaseUid: uid,
-        phone: phone_number,
-        role: role || "STUDENT",
-      });
-    }
 
     return res.status(200).json({
       message: "Login successful",

@@ -1,16 +1,15 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function MainPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate("/login");
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    if (loading) return;
+    navigate(user ? "/dashboard" : "/login", { replace: true });
+  }, [loading, user, navigate]);
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-100">
       <div className="relative w-[375px] h-[812px] overflow-hidden rounded-[8px] bg-gradient-to-b from-[#faf9ff] via-[#f3efff] to-[#cfc4ff] shadow-2xl">

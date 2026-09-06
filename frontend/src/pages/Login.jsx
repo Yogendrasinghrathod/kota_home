@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   exchangePhoneEmailToken,
   signInWithPhoneEmail,
-  loginUser,
 } from "../config/services/authService";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -17,11 +16,21 @@ const Login = () => {
   const isOwnerRef = useRef(isOwner);
   const finishLoginRef = useRef(null);
 
-  const { setUser } = useAuth();
+  const { setUser, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   isOwnerRef.current = isOwner;
+
+  useEffect(() => {
+    if (user && !finishingRef.current) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    import("./Dashboard.jsx");
+  }, []);
 
   const finishLogin = async ({ accessToken, userJsonUrl }) => {
     if ((!accessToken && !userJsonUrl) || finishingRef.current) return;
@@ -31,16 +40,15 @@ const Login = () => {
       setError("");
       setLoading(true);
 
-      const { customToken } = await exchangePhoneEmailToken({
+      const role = isOwnerRef.current ? "OWNER" : "STUDENT";
+      const { customToken, user: appUser } = await exchangePhoneEmailToken({
         accessToken,
         userJsonUrl,
+        role,
       });
-      const firebaseUser = await signInWithPhoneEmail(customToken);
-      const idToken = await firebaseUser.getIdToken();
-      const role = isOwnerRef.current ? "OWNER" : "STUDENT";
-      const data = await loginUser(idToken, role);
 
-      setUser(data.user);
+      setUser(appUser);
+      await signInWithPhoneEmail(customToken);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       finishingRef.current = false;
@@ -143,19 +151,19 @@ const Login = () => {
             <p className="mt-4 text-center text-[9px] text-red-500">{error}</p>
           )}
 
-          {loading ? (
+          {loading && (
             <p className="mt-6 text-center text-[12px] text-gray-500">
               Signing in...
             </p>
-          ) : (
-            <div className="mt-6 flex w-full justify-center">
-              <div
-                id="pe-signin-button"
-                className="pe_signin_button"
-                data-client-id={clientId}
-              />
-            </div>
           )}
+
+          <div className={`mt-6 flex w-full justify-center ${loading ? "hidden" : ""}`}>
+            <div
+              id="pe-signin-button"
+              className="pe_signin_button"
+              data-client-id={clientId}
+            />
+          </div>
 
           <p className="mt-3 text-center text-[9px] text-gray-400">
             OTP is sent by Phone.Email. Firebase SMS is not used.

@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AppShell from "./components/AppShell.jsx";
 import StartPage from "./pages/StartPage.jsx";
 
 const Login = lazy(() => import("./pages/Login.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
 const Properties = lazy(() => import("./pages/Properties.jsx"));
 const PropertyDetails = lazy(() => import("./pages/PropertyDetails.jsx"));
 const DisplayRooms = lazy(() => import("./pages/DisplayRooms.jsx"));
@@ -29,105 +29,82 @@ function App() {
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/" element={<StartPage />} />
-
           <Route path="/login" element={<Login />} />
 
           <Route
-            path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <AppShell />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reviews"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <OwnerReviews />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <Properties />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/add"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <AddProperty />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:id/location"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <AddPropertyLocation />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:id/media"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <AddPropertyMedia />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:id"
-            element={
-              <ProtectedRoute>
-                <PropertyDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:propertyId/rooms"
-            element={
-              <ProtectedRoute>
-                <DisplayRooms />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:propertyId/rooms/add"
-            element={
-              <ProtectedRoute roles={["OWNER", "ADMIN"]}>
-                <AddRoom />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:propertyId/rooms/photos"
-            element={
-              <ProtectedRoute>
-                <RoomPhotos />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/properties/:propertyId/rooms/:roomId"
-            element={
-              <ProtectedRoute>
-                <RoomDetails />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route path="/dashboard" element={<></>} />
+            <Route path="/profile" element={<Profile />} />
+            <Route
+              path="/reviews"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <OwnerReviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <Properties />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties/add"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <AddProperty />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties/:id/location"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <AddPropertyLocation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties/:id/media"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <AddPropertyMedia />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties/:id"
+              element={<PropertyDetails />}
+            />
+            <Route
+              path="/properties/:propertyId/rooms"
+              element={<DisplayRooms />}
+            />
+            <Route
+              path="/properties/:propertyId/rooms/add"
+              element={
+                <ProtectedRoute roles={["OWNER", "ADMIN"]}>
+                  <AddRoom />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/properties/:propertyId/rooms/photos"
+              element={<RoomPhotos />}
+            />
+            <Route
+              path="/properties/:propertyId/rooms/:roomId"
+              element={<RoomDetails />}
+            />
+          </Route>
         </Routes>
       </Suspense>
     </BrowserRouter>

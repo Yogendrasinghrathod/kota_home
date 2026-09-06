@@ -1,12 +1,19 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { subscribeToAuthState, getCurrentUser } from "../config/services/authService";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const setUser = useCallback((next) => {
+    userRef.current = next;
+    setUserState(next);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -17,6 +24,14 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           setLoading(false);
         }
+        return;
+      }
+
+      const alreadyReady =
+        userRef.current?.firebaseUid === firebaseUser.uid;
+
+      if (alreadyReady) {
+        if (!cancelled) setLoading(false);
         return;
       }
 
@@ -45,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       setUser,
       loading,
     }),
-    [user, loading]
+    [user, loading, setUser]
   );
 
   return (
